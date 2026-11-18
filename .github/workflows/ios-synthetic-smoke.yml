@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   public-ios-simulator:
-    runs-on: macos-26
+    runs-on: macos-15
     timeout-minutes: 38
     steps:
       - name: Check out public Demo smoke branch
