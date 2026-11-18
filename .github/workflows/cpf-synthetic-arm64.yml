@@ -1,0 +1,33 @@
+name: CPF synthetic gradient ARM64 compile and link (probe)
+on:
+  push:
+    branches: [ci/cpf-synthetic-arm64]
+    paths:
+      - '.github/workflows/cpf-synthetic-arm64.yml'
+      - 'ci/cpf-arm64/**'
+permissions:
+  contents: read
+concurrency:
+  group: cpf-synthetic-arm64-probe
+  cancel-in-progress: false
+jobs:
+  cpf-arm64:
+    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/cpf-synthetic-arm64'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Check out only the public probe branch commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Check out the exact public Codegen input
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: changyue1053/MadUIKitCodegen
+          ref: b174b847a6e4096924bb1026d1b94a8d9a0c49a8
+          path: ci-input/cpf-codegen
+          persist-credentials: false
+          sparse-checkout: sample-gradient-output
+      - name: Build and inspect the exact synthetic gradient page
+        shell: bash
+        run: bash ci/cpf-arm64/link-on-runner.sh
