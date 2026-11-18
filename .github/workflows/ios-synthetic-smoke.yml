@@ -1,0 +1,48 @@
+name: iOS synthetic Demo smoke
+on:
+  push:
+    branches: ['ci/ios-synthetic-smoke']
+    paths:
+      - '.github/workflows/ios-synthetic-smoke.yml'
+      - 'scripts/ios-ci-smoke.sh'
+      - 'scripts/verify-ios-ci-stage.py'
+permissions:
+  contents: read
+concurrency:
+  group: ios-synthetic-smoke
+  cancel-in-progress: true
+jobs:
+  public-ios-simulator:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - name: Check out public Demo smoke branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Check out exact public SDK
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: changyue1053/MadUIKit
+          ref: b2aef1c1b4f1e09f014c70a3ee19ea7a0d494e42
+          path: ci-input/sdk
+          persist-credentials: false
+      - name: Check out exact public Codegen for fixture provenance
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: changyue1053/MadUIKitCodegen
+          ref: b174b847a6e4096924bb1026d1b94a8d9a0c49a8
+          path: ci-input/codegen
+          persist-credentials: false
+      - name: Stage KLIBs, independently build Demo, and capture simulator
+        shell: bash
+        run: bash scripts/ios-ci-smoke.sh
+      - name: Upload bounded public smoke evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: maduikit-public-ios-smoke
+          path: ${{ runner.temp }}/maduikit-ios-evidence/
+          if-no-files-found: warn
+          retention-days: 7
