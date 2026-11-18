@@ -1,0 +1,40 @@
+name: CPF SDK module integration ARM64 (synthetic probe)
+on:
+  push:
+    branches: [ci/cpf-sdk-integration]
+    paths:
+      - '.github/workflows/cpf-sdk-integration.yml'
+      - 'ci/cpf-sdk/**'
+permissions:
+  contents: read
+concurrency:
+  group: cpf-sdk-integration-probe
+  cancel-in-progress: false
+jobs:
+  cpf-arm64:
+    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/cpf-sdk-integration'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Check out only the public probe branch commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Check out the exact public Codegen input
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: changyue1053/MadUIKitCodegen
+          ref: b174b847a6e4096924bb1026d1b94a8d9a0c49a8
+          path: ci-input/cpf-codegen
+          persist-credentials: false
+          sparse-checkout: sample-gradient-output
+      - name: Check out exact public SDK common sources
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: changyue1053/MadUIKit
+          ref: 19c8c1b1fbe75b7d6a6118fdab42048948de091b
+          path: ci-input/cpf-sdk
+          persist-credentials: false
+      - name: Build and inspect the exact synthetic gradient page
+        shell: bash
+        run: bash ci/cpf-sdk/link-on-runner.sh
