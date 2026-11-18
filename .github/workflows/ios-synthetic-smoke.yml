@@ -6,6 +6,8 @@ on:
       - '.github/workflows/ios-synthetic-smoke.yml'
       - 'scripts/ios-ci-smoke.sh'
       - 'scripts/verify-ios-ci-stage.py'
+      - 'iosApp/Demo.xcconfig'
+      - 'iosApp/Info.plist'
 permissions:
   contents: read
 concurrency:
@@ -20,7 +22,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
-          fetch-depth: 2
+          fetch-depth: 0
       - name: Check out exact public SDK
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
