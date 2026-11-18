@@ -1,22 +1,26 @@
-name: iOS synthetic Demo smoke
+name: iOS synthetic filter tabs smoke
 on:
   push:
-    branches: ['ci/ios-synthetic-smoke']
+    branches: ['ci/ios-filter-tabs-smoke']
     paths:
       - '.github/workflows/ios-synthetic-smoke.yml'
       - 'scripts/ios-ci-smoke.sh'
       - 'scripts/verify-ios-ci-stage.py'
       - 'iosApp/Demo.xcconfig'
       - 'iosApp/Info.plist'
+      - 'iosApp/BookFilterUITests.swift'
+      - 'iosApp/MadUIKitDemo.xcodeproj/**'
+      - 'composeApp/src/commonMain/kotlin/dev/maduikit/demo/DemoScreen.kt'
+      - 'scripts/export-ios-smoke-screens.py'
 permissions:
   contents: read
 concurrency:
-  group: ios-synthetic-smoke
+  group: ios-filter-tabs-smoke
   cancel-in-progress: true
 jobs:
   public-ios-simulator:
     runs-on: macos-26
-    timeout-minutes: 30
+    timeout-minutes: 38
     steps:
       - name: Check out public Demo smoke branch
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -27,24 +31,24 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: changyue1053/MadUIKit
-          ref: b2aef1c1b4f1e09f014c70a3ee19ea7a0d494e42
+          ref: 19c8c1b1fbe75b7d6a6118fdab42048948de091b
           path: ci-input/sdk
           persist-credentials: false
       - name: Check out exact public Codegen for fixture provenance
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: changyue1053/MadUIKitCodegen
-          ref: b174b847a6e4096924bb1026d1b94a8d9a0c49a8
+          ref: dd05c6c863f0c9de2e62017deadb378dd42f5603
           path: ci-input/codegen
           persist-credentials: false
-      - name: Stage KLIBs, independently build Demo, and capture simulator
+      - name: Stage SDK, build independent Demo and exercise XCUI tab tap
         shell: bash
         run: bash scripts/ios-ci-smoke.sh
       - name: Upload bounded public smoke evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: maduikit-public-ios-smoke
+          name: maduikit-public-ios-filter-tabs-smoke
           path: ${{ runner.temp }}/maduikit-ios-evidence/
           if-no-files-found: warn
           retention-days: 7
