@@ -1,18 +1,18 @@
-name: CPF SDK module integration ARM64 (synthetic probe)
+name: CPF ARM64-only target and renderer audit
 on:
   push:
-    branches: [ci/cpf-sdk-integration]
+    branches: [ci/cpf-sdk-arm64-audit]
     paths:
       - '.github/workflows/cpf-sdk-integration.yml'
       - 'ci/cpf-sdk/**'
 permissions:
   contents: read
 concurrency:
-  group: cpf-sdk-integration-probe
+  group: cpf-sdk-arm64-audit-probe
   cancel-in-progress: false
 jobs:
   cpf-arm64:
-    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/cpf-sdk-integration'
+    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/cpf-sdk-arm64-audit'
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
