@@ -85,7 +85,7 @@ def add_sdk(tree, sdk):
     build = tree / "composeApp/build.gradle.kts"
     text = build.read_text()
     require(text.count("commonMain.dependencies {") == 1, "Unexpected app dependency block")
-    build.write_text(text.replace("commonMain.dependencies {", 'commonMain.dependencies {\n            implementation(project(":maduikit-components"))'))
+    shutil.copyfile(BASE / "AppArm64.build.gradle.kts", build)
     (tree / "sdk-source-provenance.json").write_text(json.dumps({"sdk_commit": "19c8c1b1fbe75b7d6a6118fdab42048948de091b", "mode": "separate Gradle projects with CPF build adapters; exact common sources, not original SDK build or published artifacts", "sha256": actual}, indent=2))
 
 
