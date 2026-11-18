@@ -41,7 +41,30 @@ pixels. The project declares iOS ARM64 targets and retains the host shell, but
 the documented Android stage has no iOS binaries; that shell is outside this
 rehearsal. No HarmonyOS implementation is included here.
 
-## Verify generated source
+## Verified generated-source consumer gate
+
+Prepare a sibling `MadUIKitCodegen` checkout at commit `9ac33f7` or a compatible
+later version, then run `./gradlew check installDist` there. Demo Kotlin
+compilation now depends on `verifyGeneratedSource`: it generates a fresh public
+synthetic gradient bundle through Codegen's verified wrapper, requires successful
+receipts, and compares the checked-in Demo source byte-for-byte. A generation
+failure or source mismatch stops compilation instead of accepting stale output.
+Use `-PmaduikitCodegenDir=/absolute/path/to/MadUIKitCodegen` for another location.
+This adds an intentional local checkout/build prerequisite; no online Figma
+access or private inputs are used.
+
+```sh
+./gradlew :composeApp:verifyGeneratedSource :composeApp:consumerSmokeTest
+```
+
+The smoke test accepts the valid bundle and rejects omitted source, missing
+manifest/diagnostics/source, changed code, failed diagnostics, mismatched hashes
+and malformed metadata, including with Python's optimization enabled. `check`
+depends on this test. These receipts are consistency checks, not cryptographic
+signatures or proof of visual equivalence. Use trusted checkouts and unique
+output directories as documented by Codegen.
+
+## Inspect generated source directly
 
 After checking out `MadUIKitCodegen` next to this repository:
 
@@ -51,6 +74,26 @@ python3 scripts/check-structure.py \
 sh -n scripts/ios-framework.sh
 ```
 
-The Python check compares the generated file byte-for-byte, verifies the
-Codegen manifest hash and checks host structure. To regenerate the fixture,
+The Python check requires the generated file, manifest and successful diagnostics,
+compares source byte-for-byte, verifies its manifest hash and checks host structure. To regenerate the fixture,
 follow the Codegen README's gradient and fit-width example.
+
+
+## Optional native Desktop consumer evidence
+
+`ci/verified-consumer-desktop` is an isolated JVM verification harness. It compiles
+and renders the actual checked-in `DemoScreen` and generated page, after the same
+fresh-bundle gate. It compiles SDK `MadTheme` from source through an adapter;
+it does **not** prove a published Desktop SDK artifact, Android/iOS/Harmony
+packaging, device behavior or Figma pixel parity.
+
+```sh
+cd ci/verified-consumer-desktop
+# Use the repository Gradle Wrapper with this directory as the working directory.
+../../gradlew run --args=/absolute/path/to/demo-consumer.png
+```
+
+Default SDK and Codegen locations are sibling checkouts of this Demo repository.
+Override with `-PmaduikitSdkDir=...` and `-PmaduikitCodegenDir=...` when needed.
+The output is a genuine 390×560 native Compose Desktop capture of synthetic data,
+not a device screenshot. No screenshot is checked into this repository.

@@ -12,17 +12,32 @@ shared = root / "composeApp/src"
 kotlin = shared / "commonMain/kotlin/dev/maduikit/demo"
 generated = kotlin / "generated/FigmaProfileScreen.generated.kt"
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("--generated-source", type=Path, help="Optional Codegen output to compare byte-for-byte.")
+parser.add_argument("--generated-source", type=Path, required=True, help="Required verified Codegen bundle source to compare byte-for-byte.")
 args = parser.parse_args()
-if args.generated_source is not None:
+def require(value, message):
+    if not value:
+        raise SystemExit(message)
+
+try:
+    source_path = args.generated_source
+    require(source_path.name == generated.name and not source_path.is_symlink(), "Expected ordinary canonical generated source")
     generated_bytes = generated.read_bytes()
-    assert generated_bytes == args.generated_source.read_bytes(), "Demo altered generated Kotlin"
-    manifest_path = args.generated_source.with_name("manifest.json")
-    if manifest_path.is_file():
-        generated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        assert hashlib.sha256(generated_bytes).hexdigest() == generated_manifest["files"][generated.name], (
-            "Generated Kotlin does not match Codegen manifest"
-        )
+    require(generated_bytes == source_path.read_bytes(), "Demo altered generated Kotlin")
+    manifest_path = source_path.with_name("manifest.json")
+    diagnostics_path = source_path.with_name("diagnostics.json")
+    require(manifest_path.is_file() and not manifest_path.is_symlink(), "Missing or linked Codegen manifest")
+    require(diagnostics_path.is_file() and not diagnostics_path.is_symlink(), "Missing or linked generation diagnostics")
+    generated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    diagnostics = json.loads(diagnostics_path.read_text(encoding="utf-8"))
+    require(diagnostics.get("ok") is True and diagnostics.get("errors") == [], "Generation did not succeed")
+    require(generated_manifest.get("schemaVersion") == diagnostics.get("schemaVersion") == 1, "Unsupported receipt schema")
+    require(generated_manifest.get("target") == "cmp", "Expected CMP target")
+    require(generated_manifest.get("inputSha256") == diagnostics.get("inputSha256") and
+            re.fullmatch(r"[0-9a-f]{64}", str(generated_manifest.get("inputSha256"))), "Input receipts disagree")
+    require(hashlib.sha256(generated_bytes).hexdigest() == generated_manifest["files"][generated.name],
+            "Generated Kotlin does not match Codegen manifest")
+except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
+    raise SystemExit(f"Invalid generated bundle: {error}")
 manifest = ET.parse(shared / "androidMain/AndroidManifest.xml")
 scheme = ET.parse(
     root / "iosApp/MadUIKitDemo.xcodeproj/xcshareddata/xcschemes/MadUIKitDemo.xcscheme"

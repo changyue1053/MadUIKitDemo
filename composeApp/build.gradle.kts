@@ -93,3 +93,22 @@ tasks.register("verifyStagedAndroidSdk") {
         }
     }
 }
+
+// Fail before Kotlin compilation if the Demo is detached from verified generation.
+val verifyGeneratedSource by tasks.registering(Exec::class) {
+    group = "verification"
+    description = "Generate a fresh synthetic bundle and verify the Demo consumes it unchanged."
+    commandLine("python3", rootProject.file("scripts/verify-codegen-consumer.py").absolutePath,
+        "--codegen-root", rootProject.file(providers.gradleProperty("maduikitCodegenDir")
+            .getOrElse("../MadUIKitCodegen")).absolutePath)
+}
+tasks.matching { it.name.startsWith("compile") && it.name.contains("Kotlin") }.configureEach {
+    dependsOn(verifyGeneratedSource)
+}
+val consumerSmokeTest by tasks.registering(Exec::class) {
+    group = "verification"
+    commandLine("python3", rootProject.file("scripts/consumer-smoke.py").absolutePath,
+        "--codegen-root", rootProject.file(providers.gradleProperty("maduikitCodegenDir")
+            .getOrElse("../MadUIKitCodegen")).absolutePath)
+}
+tasks.named("check") { dependsOn(consumerSmokeTest) }
