@@ -50,7 +50,10 @@ gradle="$root/gradle-8.9/bin/gradle"
 opts=(--console=plain --no-daemon --no-build-cache --max-workers=1
   "-Dorg.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8 -Djava.io.tmpdir=$TMPDIR"
   "-Djava.io.tmpdir=$TMPDIR")
-timeout 1000 "$gradle" "${opts[@]}" :composeApp:compileKotlinOhosArm64 | tee "$root/compile.log"
+timeout 1000 "$gradle" "${opts[@]}" :composeApp:compileKotlinOhosArm64 2>&1 | tee "$root/compile.log"
+if grep -F "Couldn't resolve dependency 'project :maduikit-components'" "$root/compile.log"; then
+  echo 'ARM64-only app still has target resolution mismatch'; exit 3
+fi
 k=composeApp/build/classes/kotlin/ohosArm64/main/klib/composeApp/default
 grep -Fx 'native_targets=ohos_arm64' "$k/manifest"
 grep -Fx 'compiler_version=2.2.21-1.2.0' "$k/manifest"
@@ -65,9 +68,13 @@ grep -aFq 'MadFilterTabs' maduikit-components/build/classes/kotlin/ohosArm64/mai
 "$gradle" "${opts[@]}" --offline :composeApp:dependencies --configuration ohosArm64CompileKlibraries > "$GITHUB_WORKSPACE/cpf-sdk-dependencies.txt"
 grep -F 'project :maduikit-components' "$GITHUB_WORKSPACE/cpf-sdk-dependencies.txt"
 grep -F 'project :maduikit-theme' "$GITHUB_WORKSPACE/cpf-sdk-dependencies.txt"
+echo '### Resolved ARM64 renderer dependency coordinates'
+grep -Ei 'skiko|org.jetbrains.compose.ui:ui' "$GITHUB_WORKSPACE/cpf-sdk-dependencies.txt"
+echo '### Exact resolved renderer artifact SHA-256'
+find "$GRADLE_USER_HOME/caches" -type f \( -name '*skiko*klib' -o -name 'ui-ohosarm64-*.klib' \) -exec sha256sum {} \;
 df -h "$RUNNER_TEMP"
 free -h
-timeout 1000 "$gradle" "${opts[@]}" --offline :composeApp:linkDebugSharedOhosArm64
+timeout 1000 "$gradle" "${opts[@]}" --offline :composeApp:linkDebugSharedOhosArm64 2>&1 | tee "$root/link.log"
 bin=composeApp/build/bin/ohosArm64/debugShared
 so="$bin/libkn.so"
 header="$bin/libkn_api.h"
@@ -79,7 +86,7 @@ grep -E 'Machine:[[:space:]]+AArch64' "$root/elf.header"
 awk '$7 != "UND" && $8 == "MainArkUIViewController" { found=1 } END { exit !found }' "$root/elf.dynamic-symbols"
 grep -Fq 'MainArkUIViewController' "$header"
 {
-  echo '### CPF SDK project-overlay synthetic ARM64: compile and link verified'
+  echo '### CPF ARM64-only SDK project-overlay synthetic ARM64: compile and link verified'
   printf 'Shared gradient Kotlin SHA-256: `%s`\n' "$page_sha"
   echo 'Exact SDK common source modules with CPF build adapters; not original SDK build or published Maven compatibility.'
   echo 'Verified AArch64 ELF shared library and defined MainArkUIViewController export; no HAP, signature or runtime.'
