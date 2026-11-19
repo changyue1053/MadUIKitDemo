@@ -37,3 +37,26 @@ An earlier Intel attempt exposed an actual macOS path issue: the generation wrap
 This proves clean-checkout generation, external SDK consumption, native compilation and one launch/render on Intel iOS simulator. It does **not** prove ARM64 simulator/device builds, release signing, interaction behavior, accessibility, universal Figma coverage, exact cross-platform pixel parity or the user's private Figma page. No private Figma data was used or published. Production source targets remain unchanged.
 
 Next independent gate: production ARM64 simulator validation on an available standard runner, and subsequent interaction tests. Preserve these acceptance boundaries rather than treating this synthetic smoke as full product completion.
+
+## Follow-up: native filter interaction PASS
+
+[Run 44443969816](https://github.com/changyue1053/MadUIKitDemo/actions/runs/44443969816), job 135291447501, passed on 2026-11-19 at 02:52 UTC.
+Tested commit `67fa36d8cdb72b33cbbaa2a80749f38a5a77f045`, branch `ci/ios-filter-intel`. Same Demo/SDK/Codegen pins above, same standard Intel adapter.
+
+The isolated test archive overlays the existing public Books filter host and XCUI project. SDK Kotlin and generated gradient source are unchanged. Native XCTest on iPhone 16 simulator, iOS 26.0.1, x86_64 reported **1 passed, 0 failed, 0 skipped**:
+- Initial All books selected; request count 0.
+- Native tap Favorites selects it and increments requests to 1.
+- Unavailable exposes disabled accessibility semantics.
+- Physical coordinate tap at its center leaves Favorites selected and request count 1 (including a 2-second negative wait for unwanted selection).
+
+Three native 1178×2556 screenshots were retained and visually reviewed. The generated gradient marker remained present in all three. This adds narrow selection/disabled-tap evidence, not comprehensive interaction/accessibility validation or private Figma parity.
+
+Artifact `public-ios-filter-intel` (14494430422) ZIP SHA-256:
+`eb9670bbfb6a2ba08cf10ef6a177f2a07b767772c93718675d51432641eeb5d8`.
+Artifact includes XCUI summary, three screenshots, checksums and an original fresh generation bundle (manifest, diagnostics, source/map). This additional receipt bundle was generated after the test and independently checked against the same compiled checked-in source, not represented as the earlier temporary compiler-gate bundle. Kotlin SHA remains `652457633b3e993965e4aefccc20e60ba0577b697ff04adc713bde7544e8e0e5`.
+
+Resolved external KLIBs matched this run's stage:
+- components: `950373a5e6782512a0058c4151e70f550f2e210a410d1128eb040aec50c02da9`
+- theme: `9ff30045754c4a1565945c2b291545c8d4ed2f5fe85a7116e5a574ff5da934a4`
+
+These hashes differ from the earlier build; no reproducible-binary claim is made. No SDK product target changes, paid runner or private inputs.
