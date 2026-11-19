@@ -5,16 +5,28 @@ evidence="$root/ci-evidence/android-verified-consumer"
 mkdir -p "$evidence"
 exec > >(tee "$evidence/runtime.log") 2>&1
 : "${ANDROID_HOME:?Hosted runner Android SDK required}"
+export ANDROID_USER_HOME="${RUNNER_TEMP:?Hosted runner temp required}/mad-public-android"
+export ANDROID_EMULATOR_HOME="$ANDROID_USER_HOME"
+export ANDROID_AVD_HOME="$ANDROID_USER_HOME/avd"
+mkdir -p "$ANDROID_AVD_HOME"
 export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
 sdkmanager 'emulator' 'system-images;android-35;google_apis;x86_64'
 # This dedicated hosted CI runner has no user device or private application state.
 if test -e /dev/kvm && ! test -w /dev/kvm; then sudo chmod a+rw /dev/kvm; fi
 emulator -accel-check
-printf 'no\n' | avdmanager create avd --name mad-public-consumer --package 'system-images;android-35;google_apis;x86_64' --device pixel_2
+printf 'no\n' | avdmanager create avd --name mad-public-consumer --package 'system-images;android-35;google_apis;x86_64' --device pixel_2 --path "$ANDROID_AVD_HOME/mad-public-consumer.avd"
+test -f "$ANDROID_AVD_HOME/mad-public-consumer.ini"
+emulator -list-avds | grep -Fx mad-public-consumer
 emulator -avd mad-public-consumer -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect -camera-back none -camera-front none > "$evidence/emulator.log" 2>&1 &
 pid=$!
 trap 'adb emu kill >/dev/null 2>&1 || true; kill "$pid" 2>/dev/null || true' EXIT
-timeout 240 adb wait-for-device
+connected=false
+for i in $(seq 1 120); do
+  if ! kill -0 "$pid" 2>/dev/null; then cat "$evidence/emulator.log"; exit 1; fi
+  if adb devices | grep -Eq '^emulator-[0-9]+[[:space:]]+device$'; then connected=true; break; fi
+  sleep 2
+done
+test "$connected" = true
 booted=false
 for i in $(seq 1 120); do
   if test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1; then booted=true; break; fi
