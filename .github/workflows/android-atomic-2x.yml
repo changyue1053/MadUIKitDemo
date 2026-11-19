@@ -1,0 +1,40 @@
+name: Android atomic retained APK 2x geometry
+on:
+  push:
+    branches: [ci/android-atomic-2x]
+    paths: ['ci/android-atomic-2x/**', '.github/workflows/android-atomic-2x.yml']
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: android-atomic-2x
+  cancel-in-progress: false
+jobs:
+  density:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Reuse exact successful public APK without rebuild
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 44471409431 -R changyue1053/MadUIKitDemo -n public-android-atomic --dir ci-evidence/android-atomic
+          echo 'a724493a6f117f05672b9cf9b585e0e95544fff24aef578cf5c238c659518c07  ci-evidence/android-atomic/public-synthetic-demo.apk' | sha256sum -c -
+          rm ci-evidence/android-atomic/Android-Atomic-Resource.png ci-evidence/android-atomic/runtime-result.txt ci-evidence/android-atomic/pixel-proof.txt
+      - name: Native 320dpi rendering
+        run: bash ci/android-atomic-2x/run-emulator.sh
+      - name: Preserve only new 2x evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: public-android-atomic-2x
+          retention-days: 7
+          path: |
+            ci-evidence/android-atomic/Android-Atomic-Resource-2x.png
+            ci-evidence/android-atomic/pixel-proof.txt
+            ci-evidence/android-atomic/runtime-result.txt
+            ci-evidence/android-atomic/runtime.log
+            ci-evidence/android-atomic/window.xml
