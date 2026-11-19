@@ -8,12 +8,12 @@ mkdir -p "$out" "$work/sdk" "$work/demo"
 sdk="$work/sdk"; demo="$work/demo"; stage="$work/maven-stage"
 codegen="$root/ci-input/codegen"
 test "$(git -C "$root/ci-input/sdk" rev-parse HEAD)" = 19c8c1b1fbe75b7d6a6118fdab42048948de091b
-test "$(git -C "$codegen" rev-parse HEAD)" = 9ac33f74fcbe51067f6b7de544043f97591e7ec1
+test "$(git -C "$codegen" rev-parse HEAD)" = 4c12c7b6e9998b7d832b766409c321bbaa12903b
 git merge-base --is-ancestor 8f386c28d1b5709f3ce57adae2912993c1f8222f HEAD
 git diff --exit-code 8f386c28d1b5709f3ce57adae2912993c1f8222f HEAD -- . ':!ci/ios-verified-consumer' ':!.github/workflows/ios-verified-consumer.yml' ':!docs/IOS-VERIFIED-CONSUMER.md'
 git -C "$root/ci-input/sdk" archive HEAD | tar -x -C "$sdk"
 git archive 8f386c28d1b5709f3ce57adae2912993c1f8222f | tar -x -C "$demo"
-printf 'probe=%s\ndemo=%s\nsdk=%s\ncodegen=%s\n' "$(git rev-parse HEAD)" 8f386c28d1b5709f3ce57adae2912993c1f8222f 19c8c1b1fbe75b7d6a6118fdab42048948de091b 9ac33f74fcbe51067f6b7de544043f97591e7ec1 > "$out/commits.txt"
+printf 'probe=%s\ndemo=%s\nsdk=%s\ncodegen=%s\n' "$(git rev-parse HEAD)" 8f386c28d1b5709f3ce57adae2912993c1f8222f 19c8c1b1fbe75b7d6a6118fdab42048948de091b 4c12c7b6e9998b7d832b766409c321bbaa12903b > "$out/commits.txt"
 collect() {
   for f in "$work"/*.log; do
     [[ -f "$f" ]] || continue

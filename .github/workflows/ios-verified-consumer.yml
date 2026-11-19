@@ -31,7 +31,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: changyue1053/MadUIKitCodegen
-          ref: 9ac33f74fcbe51067f6b7de544043f97591e7ec1
+          ref: 4c12c7b6e9998b7d832b766409c321bbaa12903b
           path: ci-input/codegen
           persist-credentials: false
       - name: JDK 17
