@@ -1,4 +1,27 @@
-# Independent iOS SDK adoption: metadata PASS, build/runtime unverified
+# Independent iOS SDK adoption: native PASS
+
+Supersedes the earlier partial result below. [Run44525110754](https://github.com/changyue1053/MadUIKitDemo/actions/runs/44525110754), job135563483790, passed2026-11-19 13:00 UTC.
+Tested `cc1f820d00206c8b322c7022ec582f8bb93b6670` on `ci/ios-sdk-adoption`.
+
+The independent Gradle build declares only components SDK coordinate and resolves real versioned Maven metadata plus transitive theme. SDK19c8c1 Kotlin remains unchanged; isolated Intel target adapter only. No direct loose KLIB import, SDK source substitution, Codegen or registry release.
+
+Verified stages:
+- SDK staging304.91s; resolution31.63s.
+- Explicit standalone framework compile/link484.28s.
+- Simulator boot236.94s; Xcode build252.96s.
+- Xcode host phase verifies all4 prebuilt framework files against receipt, expected SDK and architecture; no Gradle invocation inside Xcode.
+- XCUI130.18s, **1 passed,0 failed/skipped**. Actual iPhone16 simulator iOS26.0.1 x86_64 displays Independent iOS SDK consumer, All books and Favorites.
+- Native1178×2556 screenshot visually inspected and SHA verified. This deliberately minimal unstyled host has adjacent tab labels; no polished design claim.
+
+Artifact14533302496 ZIP SHA256 `fcc55ebacd63888259679918785ca7cee5aac644250b0381c97615721a6a9498` retains Maven stage, graph/variant reports, per-stage status/durations, framework receipt, XCUI summary and native screenshot.
+This run's KLIB hashes:
+- components `34aa189998a64623693f266b97ba5fdbd2d42f9059b277f3440e83521f889f92`
+- theme `031d3ba05018b84b2f4e53c97150b9fc702b9866f5dc4f8a0d8ec235076492bc`
+
+Splitting framework linking from the Xcode phase resolved this workflow, but does not establish the exact root cause of the earlier stall. No unchanged retry was used for this pass. Scope remains Intel simulator adoption/launch, not ARM64/device, interaction behavior, production iosX64 support, release signing or private Figma parity.
+
+## Historical partial run
+
 
 [Run44517431166](https://github.com/changyue1053/MadUIKitDemo/actions/runs/44517431166), job135536979966, reached the45-minute limit and was cancelled.
 Tested commit `d429f39b94cbac0a996f9f7da2d7677e6545b069`, isolated `ci/ios-sdk-adoption`.
