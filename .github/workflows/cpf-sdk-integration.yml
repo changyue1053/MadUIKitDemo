@@ -1,18 +1,18 @@
-name: CPF ARM64-only target and renderer audit
+name: CPF verified native pair capture
 on:
   push:
-    branches: [ci/cpf-sdk-arm64-audit]
+    branches: [ci/cpf-native-capture]
     paths:
       - '.github/workflows/cpf-sdk-integration.yml'
       - 'ci/cpf-sdk/**'
 permissions:
   contents: read
 concurrency:
-  group: cpf-sdk-arm64-audit-probe
+  group: cpf-native-capture-probe
   cancel-in-progress: false
 jobs:
   cpf-arm64:
-    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/cpf-sdk-arm64-audit'
+    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/cpf-native-capture'
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
@@ -38,3 +38,12 @@ jobs:
       - name: Build and inspect the exact synthetic gradient page
         shell: bash
         run: bash ci/cpf-sdk/link-on-runner.sh
+      - name: Retain verified public synthetic native pair only
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cpf-native-pair-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cpf-native-capture/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0

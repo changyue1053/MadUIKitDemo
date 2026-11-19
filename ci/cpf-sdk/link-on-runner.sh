@@ -95,3 +95,6 @@ grep -Fq 'MainArkUIViewController' "$header"
   sha256sum "$so" "$header"
   echo '```'
 } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
+
+# Only reached after successful compile/link and native export checks.
+python3 "$probe/capture-native.py" --bin "$bin" --out "$RUNNER_TEMP/cpf-native-capture"
