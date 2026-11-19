@@ -3,7 +3,7 @@ set -euo pipefail
 root="$PWD";out="$RUNNER_TEMP/ios-adoption-evidence";work="$(mktemp -d "$RUNNER_TEMP/ios-adoption.XXXXXX")";sdk="$work/sdk";demo="$work/consumer";stage="$work/maven"
 mkdir -p "$out" "$sdk" "$demo"
 exec > >(tee "$out/build.log") 2>&1
-runlog(){ local name="$1";shift; "$@" > "$out/$name.log" 2>&1 || { tail -80 "$out/$name.log";return 1; }; }
+runlog(){ local name="$1";shift; python3 "$root/ci/ios-sdk-adoption/bounded-stage.py" "$name" 900 "$out/$name.log" "$@"; }
 test "$(git -C ci-input/sdk rev-parse HEAD)" = 19c8c1b1fbe75b7d6a6118fdab42048948de091b
 git -C ci-input/sdk archive HEAD | tar -x -C "$sdk"
 python3 - "$sdk" <<'PYS'
@@ -47,6 +47,22 @@ export ORG_GRADLE_PROJECT_madStage="$stage"
 (cd "$demo" && runlog resolution bash gradlew --no-daemon :composeApp:verifyAdoption)
 cp "$demo/composeApp/build/reports/sdk-adoption.txt" "$out/"
 cp -R "$stage" "$out/versioned-maven"
+# Compile/link outside Xcode: separate Gradle compiler evidence from host packaging.
+(cd "$demo" && runlog framework bash gradlew --no-daemon --console=plain :composeApp:linkDebugFrameworkIosX64)
+python3 - "$demo" "$sdk_ver" <<'PYFRAME'
+from pathlib import Path
+import hashlib,json,shutil,sys
+root=Path(sys.argv[1]);sdk='iphonesimulator'+sys.argv[2]
+source=root/'composeApp/build/bin/iosX64/debugFramework/MadUIKitDemoShared.framework'
+assert (source/'MadUIKitDemoShared').is_file() and (source/'Headers/MadUIKitDemoShared.h').is_file()
+target=root/'composeApp/build/xcode-frameworks/Debug'/sdk/source.name
+shutil.copytree(source,target)
+files={str(p.relative_to(target)):hashlib.sha256(p.read_bytes()).hexdigest() for p in target.rglob('*') if p.is_file()}
+(root/'prebuilt-framework.json').write_text(json.dumps({'sdkName':sdk,'files':files},indent=2))
+PYFRAME
+cp "$demo/prebuilt-framework.json" "$out/"
+xcrun lipo -archs "$demo/composeApp/build/bin/iosX64/debugFramework/MadUIKitDemoShared.framework/MadUIKitDemoShared" | tee "$out/framework-architecture.txt"
+grep -Fx x86_64 "$out/framework-architecture.txt"
 runlog boot xcrun simctl bootstatus "$sim" -b
 args=(-project "$demo/iosApp/MadUIKitDemo.xcodeproj" -scheme MadUIKitDemo -configuration Debug -destination "platform=iOS Simulator,id=$sim" -derivedDataPath "$work/derived" -parallel-testing-enabled NO ARCHS=x86_64 ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=NO)
 runlog xcode xcodebuild "${args[@]}" build-for-testing
