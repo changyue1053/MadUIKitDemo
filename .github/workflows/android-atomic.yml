@@ -1,0 +1,54 @@
+name: Android atomic verified PNG resource
+on:
+  push:
+    branches: [ci/android-atomic]
+    paths:
+      - '.github/workflows/android-atomic.yml'
+      - 'ci/android-atomic/**'
+permissions:
+  contents: read
+concurrency:
+  group: android-atomic
+  cancel-in-progress: false
+jobs:
+  android:
+    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/android-atomic'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Exact public SDK checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: changyue1053/MadUIKit
+          ref: 19c8c1b1fbe75b7d6a6118fdab42048948de091b
+          path: ci-input/MadUIKit
+          persist-credentials: false
+      - name: Exact public Codegen checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: changyue1053/MadUIKitCodegen
+          ref: ab86297465b3cc0107be493a2ce9c1a5ece96be6
+          path: ci-input/MadUIKitCodegen
+          persist-credentials: false
+      - name: JDK 17
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Provision and build verified Android consumer
+        shell: bash
+        run: bash ci/android-atomic/build.sh
+      - name: Install, launch and capture public synthetic Android page
+        shell: bash
+        run: bash ci/android-atomic/run-emulator.sh
+      - name: Save public test evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: public-android-atomic
+          path: ci-evidence/android-atomic
+          if-no-files-found: error
+          retention-days: 7
