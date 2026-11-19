@@ -1,7 +1,7 @@
 name: Android public filter interaction
 on:
   push:
-    branches: [ci/android-filter]
+    branches: [ci/android-filter-interaction]
     paths:
       - '.github/workflows/android-filter.yml'
       - 'ci/android-filter/**'
@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   android:
-    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/android-filter'
+    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/android-filter-interaction'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
