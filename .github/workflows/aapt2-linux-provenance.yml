@@ -1,0 +1,41 @@
+name: Public Linux AAPT2 exact provenance
+on:
+  push:
+    branches: [ci/maven-resolution-probe]
+    paths:
+      - '.github/workflows/aapt2-linux-provenance.yml'
+      - 'ci/aapt2-linux-provenance/**'
+permissions: {contents: read}
+concurrency:
+  group: public-aapt2-linux-provenance
+  cancel-in-progress: false
+jobs:
+  official-tuple:
+    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/maven-resolution-probe'
+    runs-on: macos-15-intel
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false, fetch-depth: 0}
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: changyue1053/MadUIKit
+          ref: 19c8c1b1fbe75b7d6a6118fdab42048948de091b
+          path: ci-input/sdk
+          persist-credentials: false
+      - name: Verify exact public source pin and official Linux tool bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          baseline=a63dc89d757c0508e03b32c35ca6dee09b820b1d
+          test "$(git rev-parse HEAD^)" = "$baseline"
+          git diff --exit-code "$baseline" HEAD -- . ':!ci/aapt2-linux-provenance' ':!.github/workflows/aapt2-linux-provenance.yml'
+          test "$(git -C ci-input/sdk rev-parse HEAD)" = 19c8c1b1fbe75b7d6a6118fdab42048948de091b
+          grep -Fx '    id("com.android.library") version "8.11.1" apply false' ci-input/sdk/build.gradle.kts
+          python3 ci/aapt2-linux-provenance/attest.py "$RUNNER_TEMP/aapt2-linux-receipt.json" "$(git rev-parse HEAD)"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: public-aapt2-linux-receipt
+          path: ${{ runner.temp }}/aapt2-linux-receipt.json
+          if-no-files-found: error
+          retention-days: 7
