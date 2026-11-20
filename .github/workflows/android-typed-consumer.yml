@@ -1,0 +1,35 @@
+name: Generated typed Android independent Maven build
+on:
+ push:
+  branches: [ci/android-typed-consumer]
+  paths: ['ci/android-typed-consumer/**', '.github/workflows/android-typed-consumer.yml']
+permissions: {contents: read}
+jobs:
+ adoption:
+  if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/android-typed-consumer'
+  runs-on: ubuntu-24.04
+  timeout-minutes: 40
+  steps:
+   - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+     with: {persist-credentials: false, fetch-depth: 0}
+   - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+     with:
+      repository: changyue1053/MadUIKit
+      ref: 19c8c1b1fbe75b7d6a6118fdab42048948de091b
+      path: ci-input/sdk
+      persist-credentials: false
+   - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+     with:
+      repository: changyue1053/MadUIKitCodegen
+      ref: 7276d8f3843a91ec5394e527fcbd1a63ad99a712
+      path: ci-input/codegen
+      persist-credentials: false
+   - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+     with: {distribution: temurin, java-version: '17'}
+   - run: bash ci/android-typed-consumer/run.sh
+   - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+     if: always()
+     with:
+      name: public-android-typed-evidence
+      path: ${{ runner.temp }}/android-typed-evidence
+      retention-days: 7
