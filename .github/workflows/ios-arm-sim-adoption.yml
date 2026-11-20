@@ -1,4 +1,4 @@
-name: Independent iOS ARM64 simulator runtime, changed public runner
+name: Independent Books and typed iOS ARM64 consumers, one staged SDK
 on:
   push:
     branches: [ci/ios-arm-sim-adoption]
@@ -23,53 +23,76 @@ jobs:
           ref: 19c8c1b1fbe75b7d6a6118fdab42048948de091b
           path: ci-input/sdk
           persist-credentials: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: changyue1053/MadUIKitDemo
+          ref: 060fd852f61d742e79f1963d11621739a90af6fc
+          path: ci-input/typed
+          sparse-checkout: ci/ios-typed-consumer/consumer
+          persist-credentials: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: changyue1053/MadUIKitCodegen
+          ref: 7276d8f3843a91ec5394e527fcbd1a63ad99a712
+          path: ci-input/codegen
+          sparse-checkout: scripts
+          persist-credentials: false
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
         with: {distribution: temurin, java-version: '17'}
-      - name: Gate changed simulator boot, then stage, link and perform one XCTest
+      - name: Verify one boot and one SDK stage, then test Books and typed app serially
         run: bash ci/ios-arm-sim-adoption/run.sh
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: public-ios-arm64-changed-simulator-receipt
+          name: public-ios-arm64-dual-consumer-receipt
           path: |
-            ${{ runner.temp }}/ios-arm-sim-evidence/filesystem.json
-            ${{ runner.temp }}/ios-arm-sim-evidence/sdk-adoption.txt
-            ${{ runner.temp }}/ios-arm-sim-evidence/compile-receipt.json
-            ${{ runner.temp }}/ios-arm-sim-evidence/framework-load-commands.txt
-            ${{ runner.temp }}/ios-arm-sim-evidence/framework-architecture.txt
-            ${{ runner.temp }}/ios-arm-sim-evidence/runtime.json
             ${{ runner.temp }}/ios-arm-sim-evidence/xcode.txt
-            ${{ runner.temp }}/ios-arm-sim-evidence/android-sdk.log
-            ${{ runner.temp }}/ios-arm-sim-evidence/stage.log
-            ${{ runner.temp }}/ios-arm-sim-evidence/stage.status.json
-            ${{ runner.temp }}/ios-arm-sim-evidence/resolution.log
-            ${{ runner.temp }}/ios-arm-sim-evidence/resolution.status.json
-            ${{ runner.temp }}/ios-arm-sim-evidence/framework.log
-            ${{ runner.temp }}/ios-arm-sim-evidence/framework.status.json
-            ${{ runner.temp }}/ios-arm-sim-evidence/host-build.log
-            ${{ runner.temp }}/ios-arm-sim-evidence/host-build.status.json
-            ${{ runner.temp }}/ios-arm-sim-evidence/built-test-products.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/runtime.json
             ${{ runner.temp }}/ios-arm-sim-evidence/guest-candidates.json
             ${{ runner.temp }}/ios-arm-sim-evidence/guest-selected.json
-            ${{ runner.temp }}/ios-arm-sim-evidence/guest-booted.json
-            ${{ runner.temp }}/ios-arm-sim-evidence/guest-before-test.json
-            ${{ runner.temp }}/ios-arm-sim-evidence/validator-build.log
-            ${{ runner.temp }}/ios-arm-sim-evidence/validator-build.status.json
-            ${{ runner.temp }}/ios-arm-sim-evidence/validator-prove.log
-            ${{ runner.temp }}/ios-arm-sim-evidence/validator-prove.status.json
-            ${{ runner.temp }}/ios-arm-sim-evidence/frame-validator.json
-            ${{ runner.temp }}/ios-arm-sim-evidence/boot.log
-            ${{ runner.temp }}/ios-arm-sim-evidence/boot.status.json
-            ${{ runner.temp }}/ios-arm-sim-evidence/boot-frame.log
-            ${{ runner.temp }}/ios-arm-sim-evidence/boot-frame.status.json
-            ${{ runner.temp }}/ios-arm-sim-evidence/frame-check.log
-            ${{ runner.temp }}/ios-arm-sim-evidence/frame-check.status.json
             ${{ runner.temp }}/ios-arm-sim-evidence/boot-health.json
-            ${{ runner.temp }}/ios-arm-sim-evidence/test.log
-            ${{ runner.temp }}/ios-arm-sim-evidence/test.status.json
-            ${{ runner.temp }}/ios-arm-sim-evidence/test-summary.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/stage-before.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/frame-validator.json
             ${{ runner.temp }}/ios-arm-sim-evidence/klib-selection.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/books-resolution.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/compile-receipt.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/built-test-products.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/test-summary.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/dual-resolution.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/dual-runtime.json
             ${{ runner.temp }}/ios-arm-sim-evidence/accepted-runtime/runtime.json
             ${{ runner.temp }}/ios-arm-sim-evidence/accepted-runtime/Independent-iOS-Arm64Simulator-Books.png
+            ${{ runner.temp }}/ios-arm-sim-evidence/validator-build.status.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/validator-prove.status.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/boot.status.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/boot-frame.status.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/frame-check.status.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/stage.status.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/resolution.status.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/framework.status.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/host-build.status.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/test.status.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/typed-enabled/compile-receipt.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/typed-enabled/built-test-products.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/typed-enabled/test-summary.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/typed-enabled/resolution.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/typed-enabled/generated-source.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/typed-enabled/accepted-runtime/runtime.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/typed-enabled/accepted-runtime/typed-enabled-after.png
+            ${{ runner.temp }}/ios-arm-sim-evidence/typed-enabled-resolve.status.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/typed-enabled-link.status.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/typed-enabled-host.status.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/typed-enabled-test.status.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/typed-disabled/compile-receipt.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/typed-disabled/built-test-products.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/typed-disabled/test-summary.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/typed-disabled/resolution.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/typed-disabled/generated-source.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/typed-disabled/accepted-runtime/runtime.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/typed-disabled/accepted-runtime/typed-disabled-after.png
+            ${{ runner.temp }}/ios-arm-sim-evidence/typed-disabled-resolve.status.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/typed-disabled-link.status.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/typed-disabled-host.status.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/typed-disabled-test.status.json
           if-no-files-found: warn
           retention-days: 7

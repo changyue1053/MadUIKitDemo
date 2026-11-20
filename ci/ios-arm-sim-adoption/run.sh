@@ -3,13 +3,13 @@ set -euo pipefail
 test "$(uname -s)" = Darwin
 test "$(uname -m)" = arm64
 root="$(pwd -P)"
-base=93cf2e8e26ddba88368cc8184e005282fb81ba5f
+base=f863a4c22ef843b48acacc563e3aea4ce0941b7a
 pin=19c8c1b1fbe75b7d6a6118fdab42048948de091b
 ci="$root/ci/ios-arm-sim-adoption"
 out="${RUNNER_TEMP:?}/ios-arm-sim-evidence"
 work="$(mktemp -d "$RUNNER_TEMP/ios-arm-sim.XXXXXX")"
 work="$(cd "$work" && pwd -P)"
-sdk="$work/sdk"; demo="$work/consumer"; stage="$work/maven"
+sdk="$work/sdk"; demo="$work/books"; stage="$work/maven"
 mkdir -p "$out" "$sdk" "$demo"
 runlog(){ local name="$1" bound="$2"; shift 2; python3 "$ci/bounded-stage.py" "$name" "$bound" "$out/$name.log" "$@"; }
 test "$(git rev-parse HEAD^)" = "$base"
@@ -143,9 +143,12 @@ for entry in stage.rglob("*"):
 if seen!=allowed:
     raise SystemExit("Missing exact stage namespace")
 PYSTAGE
+python3 "$ci/dual-stage.py" "$stage" > "$out/stage-before.json"
 export ORG_GRADLE_PROJECT_madStage="$stage"
+export ORG_GRADLE_PROJECT_madCodegen="$root/ci-input/codegen"
+python3 "$ci/typed-prepare.py" "$root/ci-input/typed" "$ORG_GRADLE_PROJECT_madCodegen" "$work"
 (cd "$demo" && runlog resolution 300 bash gradlew --no-daemon --console=plain :composeApp:verifyAdoption)
-cp "$demo/composeApp/build/reports/sdk-adoption.txt" "$out/"
+python3 "$ci/dual-stage.py" "$stage" "$out/stage-before.json" "$work" books > "$out/books-resolution.json"
 (cd "$demo" && runlog framework 900 bash gradlew --no-daemon --console=plain :composeApp:linkDebugFrameworkIosSimulatorArm64)
 framework="$demo/composeApp/build/bin/iosSimulatorArm64/debugFramework/MadUIKitDemoShared.framework"
 xcrun lipo -archs "$framework/MadUIKitDemoShared" > "$out/framework-architecture.txt"
@@ -181,3 +184,71 @@ mkdir "$work/attachments"
 xcrun xcresulttool export attachments --path "$work/result.xcresult" --output-path "$work/attachments"
 python3 "$ci/frame-validator.py" verify "$validator" "$out/frame-validator.json"
 python3 "$ci/runtime-proof.py" "$out" "$work/attachments" "$validator"
+
+# The two typed states are configurations of the same distinct app. Use the one
+# verified Booted guest and one immutable SDK publication; never relabel Books.
+for state in enabled disabled; do
+ case_="typed-$state"
+ typed="$work/$case_"; typed_out="$out/$case_"
+ mkdir "$typed_out"
+ cp "$sdk/gradlew" "$typed/"; cp -R "$sdk/gradle" "$typed/"
+ (cd "$typed" && runlog "$case_-resolve" 240 bash gradlew --no-daemon --console=plain :composeApp:verifyAdoption :composeApp:verifyGeneratedBinding)
+ python3 "$ci/dual-stage.py" "$stage" "$out/stage-before.json" "$work" "$case_" > "$typed_out/resolution.json"
+ (cd "$typed" && runlog "$case_-link" 600 bash gradlew --no-daemon --console=plain :composeApp:linkDebugFrameworkIosSimulatorArm64)
+ python3 "$ci/typed-prepare.py" --attest "$typed" "$state" > "$typed_out/generated-source.json"
+ # Same verifier as Books. Transient mach-O reports remain local to the run.
+ product="$typed/composeApp/build/bin/iosSimulatorArm64/debugFramework/MadUIKitDemoShared.framework"
+ xcrun lipo -archs "$product/MadUIKitDemoShared" | grep -Fx arm64
+ xcrun otool -l "$product/MadUIKitDemoShared" > "$typed_out/framework-load-commands.txt"
+ python3 "$ci/receipt.py" "$sdk" "$root/ci-input/sdk" "$typed" "$product" "$typed_out" "$sdk_ver" "$(git rev-parse HEAD)"
+ td="$work/derived-$case_"
+ targs=(-project "$typed/iosApp/MadUIKitTypedFilter.xcodeproj" -scheme MadUIKitTypedFilter -configuration Debug
+  -destination "generic/platform=iOS Simulator" -derivedDataPath "$td" -parallel-testing-enabled NO
+  ARCHS=arm64 ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO)
+ runlog "$case_-host" 360 xcodebuild "${targs[@]}" build-for-testing
+ python3 "$ci/ready-products.py" "$td/Build/Products" "$typed_out/built-test-products.json" "$(git rev-parse HEAD)" typed
+ xcrun simctl list -j | python3 "$ci/guest-inventory.py" "$sim" > "$typed_out/guest-before-test.json"
+ cmp "$out/guest-booted.json" "$typed_out/guest-before-test.json"
+ if [[ "$state" == disabled ]]; then
+  xcrun simctl uninstall "$sim" dev.mad.adoption.ios.typedfilter
+ fi
+ typed_test="$(python3 - "$td/Build/Products" "$typed_out/built-test-products.json" <<'PYTYPED'
+from pathlib import Path
+import hashlib,json,sys
+root,receipt=map(Path,sys.argv[1:])
+entry=json.loads(receipt.read_text())["xctestrun"]
+p=root/entry["path"]
+if p.parent!=root or p.resolve(strict=True)!=p or hashlib.sha256(p.read_bytes()).hexdigest()!=entry["sha256"]:
+    raise SystemExit("Typed XCTest product drift")
+print(p)
+PYTYPED
+)"
+ xc="$work/$case_.xcresult"
+ runlog "$case_-test" 350 xcodebuild -xctestrun "$typed_test" -destination "platform=iOS Simulator,id=$sim" \
+  -parallel-testing-enabled NO -resultBundlePath "$xc" \
+  -only-testing:MadUIKitTypedFilterUITests/TypedFilterUITests/testGeneratedBinding test-without-building
+ xcrun xcresulttool get test-results summary --path "$xc" > "$typed_out/test-summary.json"
+ attach="$work/$case_-attachments"; mkdir "$attach"
+ xcrun xcresulttool export attachments --path "$xc" --output-path "$attach"
+ python3 "$ci/frame-validator.py" verify "$validator" "$out/frame-validator.json"
+ python3 "$ci/runtime-proof.py" "$typed_out" "$attach" "$validator" "$case_" "$out/$case_-test.log"
+done
+python3 "$ci/dual-stage.py" "$stage" "$out/stage-before.json" "$work" all > "$out/dual-resolution.json"
+python3 - "$out" "$(git rev-parse HEAD)" <<'PYDUAL'
+from pathlib import Path
+import json,sys
+out=Path(sys.argv[1])
+def read(path):
+    return json.loads((out/path).read_text())
+names=("books","typed-enabled","typed-disabled")
+runtime={name:read(("" if name=="books" else name+"/")+"accepted-runtime/runtime.json") for name in names}
+if any(r["runtime"]!="passed" or r["variant"]!=n for n,r in runtime.items()):
+    raise SystemExit("Missing independent native test result")
+if [runtime[n]["expectedCallbacks"] for n in names] != [None,1,0]:
+    raise SystemExit("Missing typed callback coverage")
+receipt=dict(scope="two independent public apps from one own-run stage; typed states are one app",
+             revision=sys.argv[2],sameOwnRunSdk=read("stage-before.json"),
+             resolutions=read("dual-resolution.json"),native=runtime,
+             typedSources={k:read(k+"/generated-source.json") for k in names[1:]},canonicalReleaseClaim=False)
+(out/"dual-runtime.json").write_text(json.dumps(receipt,indent=2)+"\n")
+PYDUAL

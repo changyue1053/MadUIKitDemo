@@ -42,16 +42,16 @@ def declared(path, root, host=None):
     return confined(candidate,root)
 
 
-def test_target(data):
+def test_target(data, test_name=BUNDLE.removesuffix(".xctest")):
     if "TestConfigurations" in data:
         rows=[t for plan in data["TestConfigurations"] if plan.get("IsEnabled",True)
               for t in plan["TestTargets"] if t.get("IsEnabled",True)]
         need(len(rows)==1,"Unexpected additional enabled test target")
-        selected=[t for t in rows if t.get("BlueprintName")==BUNDLE.removesuffix(".xctest")]
+        selected=[t for t in rows if t.get("BlueprintName")==test_name]
     else:
         rows=[(k,v) for k,v in data.items() if isinstance(v,dict) and "TestBundlePath" in v]
         need(len(rows)==1,"Unexpected additional legacy test target")
-        selected=[v for k,v in rows if k==BUNDLE.removesuffix(".xctest")]
+        selected=[v for k,v in rows if k==test_name]
     need(len(selected)==1, "Expected one exact configured UI test target")
     return selected[0]
 
@@ -71,13 +71,18 @@ def info(bundle):
     return plistlib.loads(metadata.read_bytes())
 
 
-def inspect(root, observe=platform):
+def inspect(root, observe=platform, family="books"):
+    need(family in ("books","typed"),"Unexpected test consumer family")
+    app,runner,bundle,app_id,test_id=(APP,RUNNER,BUNDLE,"dev.mad.adoption.ios","dev.maduikit.demo.uitests")
+    if family=="typed":
+        app,runner,bundle=("MadUIKitTypedFilter.app","MadUIKitTypedFilterUITests-Runner.app","MadUIKitTypedFilterUITests.xctest")
+        app_id,test_id=("dev.mad.adoption.ios.typedfilter","dev.mad.adoption.ios.typedfilter.uitests")
     root=root.absolute()
     need(root.is_dir() and root.resolve()==root,"Missing or linked product root")
     runfiles=sorted(root.glob("*.xctestrun"))
     need(len(runfiles)==1 and runfiles[0].is_file(),"Expected one xctestrun at Build/Products root")
     runfile=confined(runfiles[0],root)
-    row=test_target(plistlib.loads(runfile.read_bytes()))
+    row=test_target(plistlib.loads(runfile.read_bytes()),bundle.removesuffix(".xctest"))
     target_app=declared(row["UITargetAppPath"],root)
     host=declared(row["TestHostPath"],root)
     # Accept Xcode's executable form as well as the .app directory form for TestHostPath.
@@ -85,8 +90,8 @@ def inspect(root, observe=platform):
         need(host.name==info(host.parent)["CFBundleExecutable"], "Wrong XCTest host executable")
         host=host.parent
     test_bundle=declared(row["TestBundlePath"],root,host)
-    need(target_app == root/CONFIG/APP and host == root/CONFIG/RUNNER and
-         test_bundle == host/"PlugIns"/BUNDLE, "Test declaration and actual products do not match")
+    need(target_app == root/CONFIG/app and host == root/CONFIG/runner and
+         test_bundle == host/"PlugIns"/bundle, "Test declaration and actual products do not match")
     records=[]
     approved=set()
     for bundle in (target_app,host,test_bundle):
@@ -99,7 +104,7 @@ def inspect(root, observe=platform):
         records.append(dict(bundle=bundle.relative_to(root).as_posix(),bundleId=meta["CFBundleIdentifier"],
             executable=binary.relative_to(root).as_posix(),sha256=sha(binary),bytes=binary.stat().st_size,
             infoPlistSha256=sha(bundle/"Info.plist"),**observe(binary)))
-    need(records[0]["bundleId"]=="dev.mad.adoption.ios","Wrong public test application identity")
+    need([r["bundleId"] for r in records]==[app_id,test_id+".xctrunner",test_id],"Wrong distinct app/runner/test identities")
     return dict(xctestrun={"path":runfile.relative_to(root).as_posix(),"sha256":sha(runfile)},
                 verifiedProducts=records,runtime="not-run",publishedBinaries=False)
 
@@ -108,7 +113,7 @@ def main():
     root,out=map(Path,sys.argv[1:3])
     commit=sys.argv[3]
     need(re.fullmatch(r"[a-f0-9]{40}",commit) is not None,"Missing exact workflow commit")
-    result=inspect(root)
+    result=inspect(root,family=sys.argv[4] if len(sys.argv)>4 else "books")
     result.update(workflowCommit=commit,destination="generic/platform=iOS Simulator")
     with out.open("x",encoding="utf-8") as f:
         json.dump(result,f,indent=2)
