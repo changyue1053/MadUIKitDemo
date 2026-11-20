@@ -49,6 +49,7 @@ jobs:
             ${{ runner.temp }}/ios-arm-sim-evidence/host-build.log
             ${{ runner.temp }}/ios-arm-sim-evidence/host-build.status.json
             ${{ runner.temp }}/ios-arm-sim-evidence/built-test-products.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/guest-candidates.json
             ${{ runner.temp }}/ios-arm-sim-evidence/guest-selected.json
             ${{ runner.temp }}/ios-arm-sim-evidence/guest-booted.json
             ${{ runner.temp }}/ios-arm-sim-evidence/guest-before-test.json

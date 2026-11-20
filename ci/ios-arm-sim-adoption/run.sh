@@ -3,7 +3,7 @@ set -euo pipefail
 test "$(uname -s)" = Darwin
 test "$(uname -m)" = arm64
 root="$(pwd -P)"
-base=ed3f7d96a50f945a7a0ce23cdf574ccdf28f7260
+base=d12886bc5220bcaff8eb043b1e24f7a2f6b96645
 pin=19c8c1b1fbe75b7d6a6118fdab42048948de091b
 ci="$root/ci/ios-arm-sim-adoption"
 out="${RUNNER_TEMP:?}/ios-arm-sim-evidence"
@@ -47,7 +47,8 @@ sdk_ver="$(xcrun --sdk iphonesimulator --show-sdk-version)"
 test "$sdk_ver" = 26.4
 printf 'ImageOS=%s\nImageVersion=%s\nmacOS=%s\nsimulatorSDK=%s\n' "$ImageOS" "$image" "$os" "$sdk_ver" >> "$out/xcode.txt"
 printf '{"runtime":"not-run","reason":"boot health not yet accepted"}\n' > "$out/runtime.json"
-xcrun simctl list -j | python3 "$ci/guest-inventory.py" > "$out/guest-selected.json"
+selected="$(xcrun simctl list -j | python3 "$ci/guest-inventory.py" --candidates "$out/guest-candidates.json")"
+printf '%s\n' "$selected" > "$out/guest-selected.json"
 sim="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["udid"])' "$out/guest-selected.json")"
 runlog boot 300 xcrun simctl bootstatus "$sim" -b
 xcrun simctl list -j | python3 "$ci/guest-inventory.py" "$sim" > "$out/guest-booted.json"
