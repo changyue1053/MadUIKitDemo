@@ -44,7 +44,7 @@ def read_attachment(root, file):
 
 
 def inspect_frame(path, decoder):
-    result=subprocess.run(["xcrun","swift",str(decoder),str(path),"books"],text=True,capture_output=True,
+    result=subprocess.run([str(decoder),str(path),"books"],text=True,capture_output=True,
                           check=True,timeout=45)
     return json.loads(result.stdout)
 

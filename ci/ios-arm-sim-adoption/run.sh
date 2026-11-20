@@ -3,7 +3,7 @@ set -euo pipefail
 test "$(uname -s)" = Darwin
 test "$(uname -m)" = arm64
 root="$(pwd -P)"
-base=d12886bc5220bcaff8eb043b1e24f7a2f6b96645
+base=33ed243162032675caaf357557ae9fe5e1eea010
 pin=19c8c1b1fbe75b7d6a6118fdab42048948de091b
 ci="$root/ci/ios-arm-sim-adoption"
 out="${RUNNER_TEMP:?}/ios-arm-sim-evidence"
@@ -50,12 +50,20 @@ printf '{"runtime":"not-run","reason":"boot health not yet accepted"}\n' > "$out
 selected="$(xcrun simctl list -j | python3 "$ci/guest-inventory.py" --candidates "$out/guest-candidates.json")"
 printf '%s\n' "$selected" > "$out/guest-selected.json"
 sim="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["udid"])' "$out/guest-selected.json")"
+# Build and prove the same Apple ImageIO profiles before boot. Do not invoke
+# the Swift interpreter while holding a live simulator or validating XCUI output.
+validator="$work/validate-imageio-frame"
+runlog validator-build 180 xcrun --sdk macosx swiftc -O -target arm64-apple-macosx26.0 \
+ "$ci/boot-frame.swift" -o "$validator"
+runlog validator-prove 35 python3 "$ci/frame-validator.py" prove \
+ "$validator" "$ci/boot-frame.swift" "$out/frame-validator.json"
 runlog boot 300 xcrun simctl bootstatus "$sim" -b
 xcrun simctl list -j | python3 "$ci/guest-inventory.py" "$sim" > "$out/guest-booted.json"
 # This PNG is deliberately runner-temp only and cannot be delivered as an application screenshot.
 boot_frame="$work/boot-health-only.png"
 runlog boot-frame 25 xcrun simctl io "$sim" screenshot "$boot_frame"
-runlog frame-check 45 xcrun swift "$ci/boot-frame.swift" "$boot_frame" boot
+python3 "$ci/frame-validator.py" verify "$validator" "$out/frame-validator.json"
+runlog frame-check 45 "$validator" "$boot_frame" boot
 python3 - "$boot_frame" "$out" <<'PYHEALTH'
 from pathlib import Path
 import hashlib,json,sys
@@ -171,4 +179,5 @@ runlog test 420 xcodebuild -xctestrun "$test_run" -destination "platform=iOS Sim
 xcrun xcresulttool get test-results summary --path "$work/result.xcresult" > "$out/test-summary.json"
 mkdir "$work/attachments"
 xcrun xcresulttool export attachments --path "$work/result.xcresult" --output-path "$work/attachments"
-python3 "$ci/runtime-proof.py" "$out" "$work/attachments" "$ci/boot-frame.swift"
+python3 "$ci/frame-validator.py" verify "$validator" "$out/frame-validator.json"
+python3 "$ci/runtime-proof.py" "$out" "$work/attachments" "$validator"

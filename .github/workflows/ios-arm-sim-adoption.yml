@@ -53,6 +53,11 @@ jobs:
             ${{ runner.temp }}/ios-arm-sim-evidence/guest-selected.json
             ${{ runner.temp }}/ios-arm-sim-evidence/guest-booted.json
             ${{ runner.temp }}/ios-arm-sim-evidence/guest-before-test.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/validator-build.log
+            ${{ runner.temp }}/ios-arm-sim-evidence/validator-build.status.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/validator-prove.log
+            ${{ runner.temp }}/ios-arm-sim-evidence/validator-prove.status.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/frame-validator.json
             ${{ runner.temp }}/ios-arm-sim-evidence/boot.log
             ${{ runner.temp }}/ios-arm-sim-evidence/boot.status.json
             ${{ runner.temp }}/ios-arm-sim-evidence/boot-frame.log
