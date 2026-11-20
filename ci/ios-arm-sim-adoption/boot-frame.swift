@@ -28,8 +28,17 @@ let inspected = pixels.withUnsafeMutableBytes { bytes -> Bool in
     return true
 }
 guard inspected else { throw FrameError.unreadable }
-let luma = stride(from: 0, to: pixels.count, by: 4).map { i in
-    (54 * Int(pixels[i]) + 183 * Int(pixels[i+1]) + 19 * Int(pixels[i+2])) / 256
+var luma: [Int] = []
+luma.reserveCapacity(pixels.count / 4)
+for i in stride(from: 0, to: pixels.count, by: 4) {
+    let red: Int = Int(pixels[i])
+    let green: Int = Int(pixels[i + 1])
+    let blue: Int = Int(pixels[i + 2])
+    let redWeight: Int = 54 * red
+    let greenWeight: Int = 183 * green
+    let blueWeight: Int = 19 * blue
+    let weightedSum: Int = redWeight + greenWeight + blueWeight
+    luma.append(weightedSum / 256)
 }
 guard let dark = luma.min(), let bright = luma.max() else { throw FrameError.blank }
 if mode == "boot" {

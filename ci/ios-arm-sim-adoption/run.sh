@@ -3,7 +3,7 @@ set -euo pipefail
 test "$(uname -s)" = Darwin
 test "$(uname -m)" = arm64
 root="$(pwd -P)"
-base=33ed243162032675caaf357557ae9fe5e1eea010
+base=93cf2e8e26ddba88368cc8184e005282fb81ba5f
 pin=19c8c1b1fbe75b7d6a6118fdab42048948de091b
 ci="$root/ci/ios-arm-sim-adoption"
 out="${RUNNER_TEMP:?}/ios-arm-sim-evidence"
