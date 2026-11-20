@@ -1,4 +1,4 @@
-name: Independent iOS ARM64 simulator test-product readiness
+name: Independent iOS ARM64 simulator runtime, changed public runner
 on:
   push:
     branches: [ci/ios-arm-sim-adoption]
@@ -12,8 +12,8 @@ concurrency:
 jobs:
   arm-sim:
     if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/ios-arm-sim-adoption'
-    runs-on: macos-15
-    timeout-minutes: 42
+    runs-on: macos-26
+    timeout-minutes: 52
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with: {persist-credentials: false, fetch-depth: 0}
@@ -25,12 +25,12 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
         with: {distribution: temurin, java-version: '17'}
-      - name: Stage, link and build-for-testing with no simulator boot
+      - name: Gate changed simulator boot, then stage, link and perform one XCTest
         run: bash ci/ios-arm-sim-adoption/run.sh
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: public-ios-arm64-test-products-receipt
+          name: public-ios-arm64-changed-simulator-receipt
           path: |
             ${{ runner.temp }}/ios-arm-sim-evidence/filesystem.json
             ${{ runner.temp }}/ios-arm-sim-evidence/sdk-adoption.txt
@@ -49,5 +49,21 @@ jobs:
             ${{ runner.temp }}/ios-arm-sim-evidence/host-build.log
             ${{ runner.temp }}/ios-arm-sim-evidence/host-build.status.json
             ${{ runner.temp }}/ios-arm-sim-evidence/built-test-products.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/guest-selected.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/guest-booted.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/guest-before-test.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/boot.log
+            ${{ runner.temp }}/ios-arm-sim-evidence/boot.status.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/boot-frame.log
+            ${{ runner.temp }}/ios-arm-sim-evidence/boot-frame.status.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/frame-check.log
+            ${{ runner.temp }}/ios-arm-sim-evidence/frame-check.status.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/boot-health.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/test.log
+            ${{ runner.temp }}/ios-arm-sim-evidence/test.status.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/test-summary.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/klib-selection.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/accepted-runtime/runtime.json
+            ${{ runner.temp }}/ios-arm-sim-evidence/accepted-runtime/Independent-iOS-Arm64Simulator-Books.png
           if-no-files-found: warn
           retention-days: 7
