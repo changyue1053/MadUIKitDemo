@@ -1,0 +1,36 @@
+name: Public AndroidX single-property preflight
+on:
+  push:
+    branches: [ci/sdk-androidx-preflight]
+    paths:
+      - '.github/workflows/sdk-androidx-preflight.yml'
+      - 'ci/sdk-androidx-preflight/**'
+permissions: {contents: read}
+concurrency:
+  group: sdk-androidx-preflight
+  cancel-in-progress: false
+jobs:
+  preflight:
+    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-androidx-preflight'
+    runs-on: macos-26
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false, fetch-depth: 2}
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: changyue1053/MadUIKit
+          ref: 19c8c1b1fbe75b7d6a6118fdab42048948de091b
+          path: ci-input/sdk
+          persist-credentials: false
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with: {distribution: temurin, java-version: '17'}
+      - name: Probe the unchanged resolver with one property changed
+        run: python3 ci/sdk-androidx-preflight/probe.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: AndroidX-Diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/mad-androidx-diagnostic/receipt.json
+          retention-days: 7
+          if-no-files-found: warn
