@@ -3,7 +3,7 @@ set -euo pipefail
 test "$(uname -s)" = Darwin
 test "$(uname -m)" = arm64
 root="$(pwd -P)"
-base=825e51833df9044f41980d699bd0135b3b0bd29f
+base=4c10c401bdf59a8c3986b8489203214af711d810
 pin=19c8c1b1fbe75b7d6a6118fdab42048948de091b
 ci="$root/ci/ios-arm-sim-adoption"
 out="${RUNNER_TEMP:?}/sdk-unified-evidence"
@@ -12,9 +12,14 @@ work="$(cd "$work" && pwd -P)"
 sdk="$work/sdk"; demo="$work/books"; stage="$work/maven"
 mkdir -p "$out" "$sdk" "$demo"
 new="$root/ci/sdk-unified-stage"
-runlog(){ local name="$1" bound="$2"; shift 2; python3 "$ci/bounded-stage.py" "$name" "$bound" "$out/$name.log" "$@"; }
+diag="$out/diagnostic"
+mkdir -p "$diag"
+gate=precheck
+finish(){ local code=$?; trap - EXIT; python3 "$new/diagnostics.py" "$out" "$gate" "$code" || true; exit "$code"; }
+trap finish EXIT
+runlog(){ local name="$1" bound="$2"; shift 2; gate="$name"; python3 "$ci/bounded-stage.py" "$name" "$bound" "$out/$name.log" "$@" > "$work/progress.log" 2>&1; }
 test "$(git rev-parse HEAD^)" = "$base"
-git diff --exit-code "$base" HEAD -- . ':!ci/sdk-unified-stage' ':!.github/workflows/sdk-unified-stage.yml'
+git diff --exit-code "$base" HEAD -- . ':!ci/sdk-unified-stage/run.sh' ':!ci/sdk-unified-stage/diagnostics.py' ':!ci/sdk-unified-stage/android-runtime.sh' ':!ci/sdk-unified-stage/finalize.py' ':!.github/workflows/sdk-unified-stage.yml'
 test "$(git -C ci-input/sdk rev-parse HEAD)" = "$pin"
 git -C ci-input/sdk archive HEAD | tar -x -C "$sdk"
 cp -R "$ci/consumer/." "$demo"
@@ -83,6 +88,7 @@ export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:?Android SDK required fo
 if [[ ! -f "$ANDROID_HOME/platforms/android-36/android.jar" ]]; then
  runlog android-sdk 300 "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_HOME" 'platforms;android-36'
 fi
+gate=stage
 (cd "$sdk" && runlog stage 900 bash gradlew --no-daemon --console=plain "-PmaduikitStagingDir=$stage" \
   :maduikit-theme:publishAndroidReleasePublicationToMadUIKitLocalRepository \
   :maduikit-theme:publishIosArm64PublicationToMadUIKitLocalRepository \
@@ -92,17 +98,23 @@ fi
   :maduikit-components:publishIosArm64PublicationToMadUIKitLocalRepository \
   :maduikit-components:publishKotlinMultiplatformPublicationToMadUIKitLocalRepository \
   :maduikit-components:publishIosSimulatorArm64PublicationToMadUIKitLocalRepository)
+gate=stage-verify
 python3 "$new/verify-stage.py" "$stage" > "$out/stage-before.json"
 export ORG_GRADLE_PROJECT_madStage="$stage"
-(cd "$demo" && runlog android-resolve 300 bash gradlew --no-daemon --console=plain :composeApp:verifyAndroidAdoption)
-(cd "$demo" && runlog android-build 600 bash gradlew --no-daemon --console=plain :composeApp:assembleDebug)
-(cd "$demo" && runlog resolution 300 bash gradlew --no-daemon --console=plain :composeApp:verifyAdoption)
 reports="$demo/composeApp/build/reports"
+gate=android-resolve
+(cd "$demo" && runlog android-resolve 300 bash gradlew --no-daemon --console=plain -Pandroid.useAndroidX=true :composeApp:verifyAndroidAdoption)
 cp "$reports/sdk-adoption-android.txt" "$out/android-resolution.txt"
+gate=android-build
+(cd "$demo" && runlog android-build 600 bash gradlew --no-daemon --console=plain -Pandroid.useAndroidX=true :composeApp:assembleDebug)
+gate=ios-resolve
+(cd "$demo" && runlog resolution 300 bash gradlew --no-daemon --console=plain -Pandroid.useAndroidX=true :composeApp:verifyAdoption)
 cp "$reports/sdk-adoption.txt" "$out/ios-resolution.txt"
+gate=android-apk-output
 apk="$demo/composeApp/build/outputs/apk/debug/composeApp-debug.apk"
 test -s "$apk"
-(cd "$demo" && runlog framework 900 bash gradlew --no-daemon --console=plain :composeApp:linkDebugFrameworkIosSimulatorArm64)
+gate=ios-framework
+(cd "$demo" && runlog framework 900 bash gradlew --no-daemon --console=plain -Pandroid.useAndroidX=true :composeApp:linkDebugFrameworkIosSimulatorArm64)
 framework="$demo/composeApp/build/bin/iosSimulatorArm64/debugFramework/MadUIKitDemoShared.framework"
 xcrun lipo -archs "$framework/MadUIKitDemoShared" > "$out/framework-architecture.txt"
 grep -Fx arm64 "$out/framework-architecture.txt"
@@ -112,6 +124,7 @@ derived="$work/derived"
 args=(-project "$demo/iosApp/MadUIKitDemo.xcodeproj" -scheme MadUIKitDemo -configuration Debug
  -destination "generic/platform=iOS Simulator" -derivedDataPath "$derived" -parallel-testing-enabled NO
  ARCHS=arm64 ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO)
+gate=host-build
 runlog host-build 480 xcodebuild "${args[@]}" build-for-testing
 python3 "$ci/ready-products.py" "$derived/Build/Products" "$out/built-test-products.json" "$(git rev-parse HEAD)"
 # Use the actual validated xctestrun; no rebuilding at runtime.
@@ -129,6 +142,7 @@ print(str(p))
 PYTEST
 )"
 printf '{"runtime":"attempted-not-verified","reason":"one XCTest launch requested"}\n' > "$out/runtime.json"
+gate=ios-test
 runlog test 420 xcodebuild -xctestrun "$test_run" -destination "platform=iOS Simulator,id=$sim" \
  -parallel-testing-enabled NO -resultBundlePath "$work/result.xcresult" \
  -only-testing:MadUIKitDemoUITests/BookFilterUITests/testIndependentConsumer test-without-building
@@ -136,8 +150,10 @@ xcrun xcresulttool get test-results summary --path "$work/result.xcresult" > "$o
 mkdir "$work/attachments"
 xcrun xcresulttool export attachments --path "$work/result.xcresult" --output-path "$work/attachments"
 python3 "$ci/frame-validator.py" verify "$validator" "$out/frame-validator.json"
+gate=ios-runtime-proof
 python3 "$ci/runtime-proof.py" "$out" "$work/attachments" "$validator"
 
+gate=stage-recheck
 python3 "$new/verify-stage.py" "$stage" > "$out/stage-after.json"
 cmp "$out/stage-before.json" "$out/stage-after.json"
 # Copy success-only stage and one Android compile artifact (not Android runtime).
@@ -148,4 +164,7 @@ cp "$apk" "$delivery/public-unified-books-android.apk"
 cp "$out/stage-before.json" "$out/android-resolution.txt" "$out/ios-resolution.txt" "$out/runtime.json" "$out/test-summary.json" "$out/xcode.txt" "$delivery/"
 cp -R "$out/accepted-runtime" "$delivery/"
 (cd "$delivery" && shasum -a 256 public-unified-books-android.apk > android-apk.sha256)
-printf 'SDK pin %s\nDemo base %s\nWorkflow commit %s\nRun %s attempt %s\nAndroid compiled only; Apple Silicon simulator Books launch and labels; iOS device KLIB published, no device app link or runtime.\n' "$pin" "$base" "$(git rev-parse HEAD)" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > "$delivery/PROVENANCE.txt"
+printf 'SDK pin %s\nDemo base %s\nWorkflow commit %s\nRun %s attempt %s\nIntermediate only: Android compiled; Apple Silicon simulator Books launch and labels; iOS device KLIB staged, no device app link or runtime.\n' "$pin" "$base" "$(git rev-parse HEAD)" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > "$delivery/PROVENANCE.txt"
+
+gate=candidate
+python3 "$new/finalize.py" produce "$delivery"

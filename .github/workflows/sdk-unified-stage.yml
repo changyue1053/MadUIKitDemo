@@ -1,17 +1,17 @@
 name: Public Android and Apple Silicon iOS same-stage SDK preview
 on:
   push:
-    branches: [ci/sdk-unified-stage]
+    branches: [ci/sdk-unified-stage-v2]
     paths:
       - '.github/workflows/sdk-unified-stage.yml'
       - 'ci/sdk-unified-stage/**'
 permissions: {contents: read}
 concurrency:
-  group: sdk-unified-stage
+  group: sdk-unified-stage-v2
   cancel-in-progress: false
 jobs:
   one-stage:
-    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-unified-stage'
+    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-unified-stage-v2'
     runs-on: macos-26
     timeout-minutes: 58
     steps:
@@ -30,7 +30,41 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: success()
         with:
-          name: MadUIKit-alpha01-Unified-Run-${{ github.run_id }}-${{ github.run_attempt }}
+          name: Not-Accepted-MadUIKit-S0-Candidate-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/sdk-unified-evidence/deliverable/
+          if-no-files-found: error
+          retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: MadUIKit-S0-macOS-diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/sdk-unified-evidence/diagnostic/macos-receipt.json
+          if-no-files-found: warn
+          retention-days: 7
+  android-runtime:
+    needs: one-stage
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: Not-Accepted-MadUIKit-S0-Candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/mad-s0-candidate
+      - name: Verify, launch and capture exact candidate APK
+        run: bash ci/sdk-unified-stage/android-runtime.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: MadUIKit-S0-Android-diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/mad-s0-android-diagnostic.json
+          if-no-files-found: warn
+          retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: success()
+        with:
+          name: MadUIKit-alpha01-Unified-Run-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/mad-s0-candidate/
           if-no-files-found: error
           retention-days: 7
