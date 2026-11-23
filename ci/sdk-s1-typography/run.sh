@@ -20,8 +20,8 @@ runlog(){
   printf '%s\t%s\t%s\n' "$gate" "$rc" "$detail" >> "$out/checkpoints.tsv"
   return "$rc"
 }
-base=3407dfb83f6753734de6149314a70b9406953730
-branch=refs/heads/ci/sdk-s1-typography-intel-stage
+base=8e72a9cc84a7fe616be53bca08bab13f0cddc429
+branch=refs/heads/ci/sdk-s1-typography-intel-xcode26
 test "${GITHUB_REF:?}" = "$branch"
 pin=19c8c1b1fbe75b7d6a6118fdab42048948de091b
 test "$(git rev-parse HEAD^)" = "$base"
@@ -32,17 +32,25 @@ host="$(uname -s)-$(uname -m)"
 macos="$(sw_vers -productVersion)"
 test "$host" = Darwin-x86_64
 [[ "$macos" == 15.* ]]
+printf '%s\n' "demo=$(git rev-parse HEAD)" "sdk=$pin" "image=${ImageVersion:?}" "host=$host" "macos=$macos" > "$out/source.txt"
 gate=stock-apple-toolchain
 java -version > "$out/java.txt" 2>&1
 grep -E 'version "17\.' "$out/java.txt"
+export DEVELOPER_DIR=/Applications/Xcode_26.0.1.app/Contents/Developer
+test -d "$DEVELOPER_DIR"
 xcodebuild -version > "$out/xcode.txt"
-grep -Eq '^Xcode 26([. ]|$)' "$out/xcode.txt"
+grep -Fx 'Xcode 26.0.1' "$out/xcode.txt"
+grep -Fx 'Build version 17A400' "$out/xcode.txt"
 for apple in iphoneos iphonesimulator; do
   sdk_path="$(xcrun --sdk "$apple" --show-sdk-path)"
   test -d "$sdk_path"
-  printf '%s=%s\n' "$apple" "$(xcrun --sdk "$apple" --show-sdk-version)" >> "$out/xcode.txt"
+  sdk_path="$(cd "$sdk_path" && pwd -P)"
+  developer_path="$(cd "$DEVELOPER_DIR" && pwd -P)"
+  [[ "$sdk_path" == "$developer_path"/Platforms/* ]]
+  sdk_version="$(xcrun --sdk "$apple" --show-sdk-version)"
+  test "$sdk_version" = 26.0
+  printf '%s=%s\n' "$apple" "$sdk_version" >> "$out/xcode.txt"
 done
-printf '%s\n' "demo=$(git rev-parse HEAD)" "sdk=$pin" "image=${ImageVersion:?}" "host=$host" "macos=$macos" > "$out/source.txt"
 export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:?Android SDK required}}"
 gate=android-sdk36-stock
 test -f "$ANDROID_HOME/platforms/android-36/android.jar"
