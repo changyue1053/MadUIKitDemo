@@ -20,12 +20,19 @@ runlog(){
   printf '%s\t%s\t%s\n' "$gate" "$rc" "$detail" >> "$out/checkpoints.tsv"
   return "$rc"
 }
-base=825e51833df9044f41980d699bd0135b3b0bd29f
+base=3407dfb83f6753734de6149314a70b9406953730
+branch=refs/heads/ci/sdk-s1-typography-intel-stage
+test "${GITHUB_REF:?}" = "$branch"
 pin=19c8c1b1fbe75b7d6a6118fdab42048948de091b
 test "$(git rev-parse HEAD^)" = "$base"
-git diff --exit-code "$base" HEAD -- . ':!ci/sdk-s1-typography/**' ':!.github/workflows/sdk-s1-typography.yml'
+git diff --exit-code "$base" HEAD -- . ':!ci/sdk-s1-typography/run.sh' ':!.github/workflows/sdk-s1-typography.yml'
 test "$(git -C ci-input/sdk rev-parse HEAD)" = "$pin"
-test "$(uname -s)-$(uname -m)-${ImageOS:?}" = Darwin-arm64-macos26
+gate=intel-host
+host="$(uname -s)-$(uname -m)"
+macos="$(sw_vers -productVersion)"
+test "$host" = Darwin-x86_64
+[[ "$macos" == 15.* ]]
+gate=stock-apple-toolchain
 java -version > "$out/java.txt" 2>&1
 grep -E 'version "17\.' "$out/java.txt"
 xcodebuild -version > "$out/xcode.txt"
@@ -35,7 +42,7 @@ for apple in iphoneos iphonesimulator; do
   test -d "$sdk_path"
   printf '%s=%s\n' "$apple" "$(xcrun --sdk "$apple" --show-sdk-version)" >> "$out/xcode.txt"
 done
-printf '%s\n' "demo=$(git rev-parse HEAD)" "sdk=$pin" "image=${ImageVersion:?}" > "$out/source.txt"
+printf '%s\n' "demo=$(git rev-parse HEAD)" "sdk=$pin" "image=${ImageVersion:?}" "host=$host" "macos=$macos" > "$out/source.txt"
 export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:?Android SDK required}}"
 gate=android-sdk36-stock
 test -f "$ANDROID_HOME/platforms/android-36/android.jar"
