@@ -1,0 +1,57 @@
+name: Public exact Android APK replay
+on:
+  push:
+    branches: [ci/sdk-android-apk-replay]
+    paths:
+      - '.github/workflows/sdk-android-apk-replay.yml'
+      - 'ci/sdk-android-apk-replay/**'
+permissions: {contents: read, actions: read}
+concurrency:
+  group: sdk-android-apk-replay
+  cancel-in-progress: false
+jobs:
+  replay:
+    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-android-apk-replay'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false, fetch-depth: 2}
+      - name: Download exact prior public candidate archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          fail_receipt() {
+            code=$?
+            if [[ "$code" != 0 ]]; then
+              python3 -c 'import json,os,sys; print(json.dumps(dict(stage="source-download",exit=int(sys.argv[1]),run=os.environ["GITHUB_RUN_ID"],attempt=os.environ["GITHUB_RUN_ATTEMPT"],commit=os.environ["GITHUB_SHA"],sourceRun="45193292225",sourceArtifact=14830601661)))' "$code" > "$RUNNER_TEMP/mad-replay-diagnostic.json"
+            fi
+          }
+          trap fail_receipt EXIT
+          test "$(git rev-parse HEAD^)" = 50705ee6c3588d7015375c5cde793982ddbc36a0
+          test "$(git diff --name-only HEAD^ HEAD | sort)" = "$(printf '%s\n' .github/workflows/sdk-android-apk-replay.yml ci/sdk-android-apk-replay/replay.sh ci/sdk-android-apk-replay/verify.py)"
+          mkdir "$RUNNER_TEMP/mad-replay-input"
+          # Do not forward Authorization to the signed cross-host download URL.
+          curl --silent --fail --location --max-redirs 3 --proto '=https' --proto-redir '=https' \
+            --connect-timeout 15 --max-time 90 --max-filesize 10151432 \
+            -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            --output "$RUNNER_TEMP/mad-replay-input/original.zip" \
+            'https://api.github.com/repos/changyue1053/MadUIKitDemo/actions/artifacts/14830601661/zip'
+      - name: Install and launch exact APK, without Gradle
+        run: bash ci/sdk-android-apk-replay/replay.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: Android-APK-Replay-Diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/mad-replay-diagnostic.json
+          if-no-files-found: warn
+          retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: success()
+        with:
+          name: Android-APK-Replay-Verified-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/mad-replay-success/
+          if-no-files-found: error
+          retention-days: 7
