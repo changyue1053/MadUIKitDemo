@@ -1,0 +1,36 @@
+name: Synthetic S1 typography stage and compile (not runtime)
+on:
+  push:
+    branches: [ci/sdk-s1-typography-stage]
+    paths:
+      - '.github/workflows/sdk-s1-typography.yml'
+      - 'ci/sdk-s1-typography/**'
+permissions: {contents: read}
+concurrency:
+  group: sdk-s1-typography-stage
+  cancel-in-progress: false
+jobs:
+  stage-compile:
+    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-s1-typography-stage'
+    runs-on: macos-26
+    timeout-minutes: 48
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false, fetch-depth: 2}
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: changyue1053/MadUIKit
+          ref: 19c8c1b1fbe75b7d6a6118fdab42048948de091b
+          path: ci-input/sdk
+          persist-credentials: false
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with: {distribution: temurin, java-version: '17'}
+      - name: Configure, stage, and compile separate SDK consumers
+        run: bash ci/sdk-s1-typography/run.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: S1-synthetic-compile-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/mad-s1-evidence/
+          if-no-files-found: warn
+          retention-days: 7
