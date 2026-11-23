@@ -1,0 +1,32 @@
+name: Public Android emulator environment diagnostic
+on:
+  push:
+    branches: [ci/sdk-android-env-preflight]
+    paths:
+      - '.github/workflows/sdk-android-env-preflight.yml'
+      - 'ci/sdk-android-env-preflight/**'
+permissions: {contents: read}
+concurrency:
+  group: sdk-android-env-preflight
+  cancel-in-progress: false
+jobs:
+  environment:
+    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-android-env-preflight'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false, fetch-depth: 2}
+      - name: Verify official emulator, KVM and API 35 setup only
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = 7b7f8d4a318a9ec00dc79646138714fc4d776db6
+          test "$(git diff --name-only HEAD^ HEAD | sort)" = "$(printf '%s\n' .github/workflows/sdk-android-env-preflight.yml ci/sdk-android-env-preflight/setup_probe.py)"
+          python3 ci/sdk-android-env-preflight/setup_probe.py "$RUNNER_TEMP/mad-android-setup.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: Android-Setup-Diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/mad-android-setup.json
+          if-no-files-found: warn
+          retention-days: 7
