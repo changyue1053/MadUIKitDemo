@@ -1,0 +1,52 @@
+name: SDK-native alpha03 synthetic Maven provenance (receipt only)
+on:
+  push:
+    branches: [ci/sdk-native-preview-proof]
+    paths:
+      - '.github/workflows/sdk-native-preview-proof.yml'
+      - 'ci/sdk-native-preview-proof/**'
+permissions: {contents: read}
+concurrency:
+  group: sdk-native-preview-proof
+  cancel-in-progress: false
+jobs:
+  proof:
+    if: >-
+      github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-native-preview-proof' && contains(github.event.head_commit.message, 'MADSDK_RUN_APPROVED: cec44952263f528bb3775f0af63af51b4a04b621')
+    runs-on: macos-15-intel
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false, fetch-depth: 2}
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: changyue1053/MadUIKit
+          ref: cec44952263f528bb3775f0af63af51b4a04b621
+          path: ci-input/sdk
+          persist-credentials: false
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with: {distribution: temurin, java-version: '17'}
+      - name: Publish one temporary stage and independently compile each consumer root
+        run: |
+          mkdir "$RUNNER_TEMP/mad-native-preview-receipts"
+          bash ci/sdk-native-preview-proof/run.sh ci-input/sdk "$RUNNER_TEMP/mad-native-preview-receipts"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: MadUIKit-alpha03-SDK-Native-Compile-Receipts-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/mad-native-preview-receipts/outcome.json
+            ${{ runner.temp }}/mad-native-preview-receipts/sdk-tree.txt
+            ${{ runner.temp }}/mad-native-preview-receipts/runner.txt
+            ${{ runner.temp }}/mad-native-preview-receipts/xcode.txt
+            ${{ runner.temp }}/mad-native-preview-receipts/apple-sdks.txt
+            ${{ runner.temp }}/mad-native-preview-receipts/stage-before.json
+            ${{ runner.temp }}/mad-native-preview-receipts/stage-after.json
+            ${{ runner.temp }}/mad-native-preview-receipts/maduikit-theme-debugCompileClasspath.json
+            ${{ runner.temp }}/mad-native-preview-receipts/maduikit-theme-iosSimulatorArm64CompileKlibraries.json
+            ${{ runner.temp }}/mad-native-preview-receipts/maduikit-theme-iosArm64CompileKlibraries.json
+            ${{ runner.temp }}/mad-native-preview-receipts/maduikit-components-debugCompileClasspath.json
+            ${{ runner.temp }}/mad-native-preview-receipts/maduikit-components-iosSimulatorArm64CompileKlibraries.json
+            ${{ runner.temp }}/mad-native-preview-receipts/maduikit-components-iosArm64CompileKlibraries.json
+          if-no-files-found: warn
+          retention-days: 7
