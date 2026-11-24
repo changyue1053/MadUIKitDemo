@@ -29,12 +29,31 @@ def file_hash(path):
             h.update(block)
     return h.hexdigest()
 
-def inventory(directory):
+def inventory_files(directory):
     require(directory.name==f"{NAME}.framework" and directory.is_dir(), "Wrong local framework")
     found = list(directory.rglob("*"))
     require(all(not p.is_symlink() and (p.is_file() or p.is_dir()) for p in found), "Unsafe framework inventory")
     files = {p.relative_to(directory).as_posix(): p for p in found if p.is_file()}
     require(set(files)==set(LIMITS), "Unexpected local framework file list")
+    return files
+
+def size_receipt(directory):
+    roles = {
+        NAME: "static-archive",
+        f"Headers/{NAME}.h": "generated-header",
+        "Modules/module.modulemap": "module-map",
+        "Info.plist": "framework-plist",
+    }
+    result = {}
+    for name, path in inventory_files(directory).items():
+        size = path.stat().st_size
+        limit = LIMITS[name]
+        status = "zero" if size == 0 else "over-cap" if size > limit else "within-cap"
+        result[roles[name]] = dict(bytes=size, capBytes=limit, status=status)
+    return dict(roles=result, allWithinExistingLimits=all(v["status"] == "within-cap" for v in result.values()))
+
+def inventory(directory):
+    files = inventory_files(directory)
     require(all(0<p.stat().st_size<=LIMITS[n] for n,p in files.items()), "Unexpected local framework size")
     with files[NAME].open("rb") as f:
         require(f.read(8)==b"!<arch>\n", "Static archive required")
@@ -53,6 +72,10 @@ def no_active_guest(doc):
 
 def handle():
     mode=sys.argv[1]
+    if mode=="measure":
+        require(len(sys.argv)==3,"Unexpected diagnostic arguments")
+        print(json.dumps(size_receipt(job_path(sys.argv[2])),sort_keys=True,indent=2))
+        return
     if mode=="check-guests":
         require(len(sys.argv)==2,"Unexpected guest arguments")
         no_active_guest(json.load(sys.stdin))

@@ -1,7 +1,7 @@
 name: Synthetic S1 iOS runtime without binary export
 on:
   push:
-    branches: [ci/sdk-s1-ui-ios-local-runtime-path]
+    branches: [ci/sdk-s1-ui-ios-local-runtime-size]
     paths:
       - '.github/workflows/sdk-s1-typography.yml'
       - 'ci/sdk-s1-typography/**'
@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   build-and-run-without-export:
-    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-s1-ui-ios-local-runtime-path'
+    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-s1-ui-ios-local-runtime-size'
     runs-on: macos-26
     timeout-minutes: 65
     steps:
@@ -49,6 +49,7 @@ jobs:
             ${{ runner.temp }}/mad-s1-evidence/ios-framework.json
             ${{ runner.temp }}/mad-s1-evidence/ui-ios-platform.txt
             ${{ runner.temp }}/mad-s1-evidence/ui-ios-framework.sha256
+            ${{ runner.temp }}/mad-s1-evidence/local-framework-sizes.json
           if-no-files-found: warn
           retention-days: 7
 

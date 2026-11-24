@@ -21,8 +21,8 @@ runlog(){
   printf '%s\t%s\t%s\n' "$gate" "$rc" "$detail" >> "$out/checkpoints.tsv"
   return "$rc"
 }
-base=db558c9898a129879795c5ce68326b4c67194c3a
-branch=refs/heads/ci/sdk-s1-ui-ios-local-runtime-path
+base=055d0ba501a2aed954d3e262d8553c8e15651406
+branch=refs/heads/ci/sdk-s1-ui-ios-local-runtime-size
 test "${GITHUB_REF:?}" = "$branch"
 pin=19c8c1b1fbe75b7d6a6118fdab42048948de091b
 test "$(git rev-parse HEAD^)" = "$base"
@@ -30,6 +30,8 @@ changed="$(git diff --name-only "$base" HEAD | LC_ALL=C sort)"
 expected="$(cat <<'FILES'
 .github/workflows/sdk-s1-typography.yml
 ci/sdk-s1-typography/run.sh
+ci/sdk-s1-typography/runtime/run-host.sh
+ci/sdk-s1-typography/runtime/same-job-framework.py
 FILES
 )"
 test "$changed" = "$expected"
@@ -147,6 +149,8 @@ shasum -a 256 "$framework_rel" > "$out/ui-ios-framework.sha256"
 gate=stage-immutable-after-ui-adopter
 python3 "$ci/verify-stage.py" "$stage" > "$out/stage-after-ui.json"
 cmp "$out/stage-before.json" "$out/stage-after-ui.json"
+gate=same-job-framework-size-diagnostic
+python3 "$ci/runtime/same-job-framework.py" measure "$(dirname "$framework")" > "$out/local-framework-sizes.json"
 gate=same-job-framework-provenance
 proof="$work/same-job-framework.json"
 sha(){ shasum -a 256 "$1" | awk '{print $1}'; }
