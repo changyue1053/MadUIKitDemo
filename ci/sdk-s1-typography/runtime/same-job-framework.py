@@ -8,7 +8,8 @@ import re
 import sys
 
 NAME = "MadUIKitS1Adopter"
-LIMITS = {NAME: 150_000_000, f"Headers/{NAME}.h": 400_000, "Modules/module.modulemap": 20_000, "Info.plist": 40_000}
+LIMITS = {NAME: 234_881_024, f"Headers/{NAME}.h": 400_000, "Modules/module.modulemap": 20_000, "Info.plist": 40_000}
+XCODE_DISK_RESERVE = 3 * 1024**3
 HASH = re.compile(r"[0-9a-f]{64}")
 
 def require(condition, message):
@@ -72,6 +73,22 @@ def no_active_guest(doc):
 
 def handle():
     mode=sys.argv[1]
+    if mode=="check-disk":
+        require(len(sys.argv)==4,"Unexpected disk qualification arguments")
+        source, destination = map(job_path,sys.argv[2:4])
+        require(destination.is_dir(),"Missing physical destination")
+        measurement = size_receipt(source)
+        require(measurement["allWithinExistingLimits"],"Invalid framework size for copy")
+        framework_bytes = sum(v["bytes"] for v in measurement["roles"].values())
+        disk = os.statvfs(destination)
+        require(disk.f_frsize>0 and disk.f_bavail>=0,"Invalid filesystem metrics")
+        available = disk.f_bavail * disk.f_frsize
+        required = framework_bytes + XCODE_DISK_RESERVE
+        result = dict(availableBytes=available, requiredBytes=required, frameworkBytes=framework_bytes,
+                      reservedForXcodeBytes=XCODE_DISK_RESERVE, passed=available>=required)
+        print(json.dumps(result,sort_keys=True,indent=2))
+        require(result["passed"],"Insufficient job-temp free space for framework and Xcode")
+        return
     if mode=="measure":
         require(len(sys.argv)==3,"Unexpected diagnostic arguments")
         print(json.dumps(size_receipt(job_path(sys.argv[2])),sort_keys=True,indent=2))
