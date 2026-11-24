@@ -1,19 +1,19 @@
-name: Synthetic S1 iOS simulator runtime
+name: Synthetic S1 iOS runtime without binary export
 on:
   push:
-    branches: [ci/sdk-s1-ui-ios-runtime]
+    branches: [ci/sdk-s1-ui-ios-local-runtime]
     paths:
       - '.github/workflows/sdk-s1-typography.yml'
       - 'ci/sdk-s1-typography/**'
 permissions: {contents: read}
 concurrency:
-  group: sdk-s1-ui-ios-runtime
+  group: sdk-s1-ui-ios-local-runtime
   cancel-in-progress: false
 jobs:
-  build-framework:
-    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-s1-ui-ios-runtime'
-    runs-on: macos-15-intel
-    timeout-minutes: 39
+  build-and-run-without-export:
+    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-s1-ui-ios-local-runtime'
+    runs-on: macos-26
+    timeout-minutes: 65
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with: {persist-credentials: false, fetch-depth: 2}
@@ -25,12 +25,12 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
         with: {distribution: temurin, java-version: '17'}
-      - name: Diagnose independent iOS adopter compile and framework
+      - name: Build iOS framework then run one synthetic XCTest locally
         run: bash ci/sdk-s1-typography/run.sh
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: S1-ui-ios-link-heap-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          name: S1-ui-ios-local-build-evidence-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/mad-s1-evidence/result.txt
             ${{ runner.temp }}/mad-s1-evidence/source.txt
@@ -52,29 +52,6 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-      - name: Pass verified synthetic static framework to the native host job
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: S1-public-synthetic-framework-transfer-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            ${{ runner.temp }}/mad-s1-runtime-transfer/framework.zip
-            ${{ runner.temp }}/mad-s1-runtime-transfer/transfer.json
-          if-no-files-found: error
-          retention-days: 1
-  arm64-runtime:
-    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-s1-ui-ios-runtime'
-    needs: build-framework
-    runs-on: macos-26
-    timeout-minutes: 26
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-        with: {persist-credentials: false}
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          name: S1-public-synthetic-framework-transfer-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/mad-s1-runtime-inbound
-      - name: Build and run the synthetic consumer exactly once
-        run: bash ci/sdk-s1-typography/runtime/run-host.sh
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:

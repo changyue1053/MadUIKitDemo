@@ -6,7 +6,8 @@ out="${RUNNER_TEMP:?}/mad-s1-evidence"
 mkdir "$out"
 gate=preflight
 work="$(mktemp -d "$RUNNER_TEMP/mad-s1.XXXXXX")"
-trap 'rc=$?; printf "gate=%s\nexit=%s\nscope=synthetic iOS compile and framework diagnostic only; no Android adopter, runtime or Harmony\n" "$gate" "$rc" > "$out/result.txt"; exit "$rc"' EXIT
+work="$(cd "$work" && pwd -P)"
+trap 'rc=$?; printf "gate=%s\nexit=%s\nscope=synthetic iOS simulator launch and tap only; no Android adopter, Harmony, or measured typography and spacing assertions\n" "$gate" "$rc" > "$out/result.txt"; exit "$rc"' EXIT
 runlog(){
   gate="$1"; local bound="$2"; shift 2
   printf 'Checkpoint: %s (%s s)\n' "$gate" "$bound"
@@ -20,8 +21,8 @@ runlog(){
   printf '%s\t%s\t%s\n' "$gate" "$rc" "$detail" >> "$out/checkpoints.tsv"
   return "$rc"
 }
-base=af58ef93c18a0092f9000cacb959171356b4afa9
-branch=refs/heads/ci/sdk-s1-ui-ios-runtime
+base=9add2265e06c8a2389a40cf9e4556fda1ca816a1
+branch=refs/heads/ci/sdk-s1-ui-ios-local-runtime
 test "${GITHUB_REF:?}" = "$branch"
 pin=19c8c1b1fbe75b7d6a6118fdab42048948de091b
 test "$(git rev-parse HEAD^)" = "$base"
@@ -29,40 +30,32 @@ changed="$(git diff --name-only "$base" HEAD | LC_ALL=C sort)"
 expected="$(cat <<'FILES'
 .github/workflows/sdk-s1-typography.yml
 ci/sdk-s1-typography/run.sh
-ci/sdk-s1-typography/runtime/framework-transfer.py
-ci/sdk-s1-typography/runtime/iosApp/BookFilterUITests.swift
-ci/sdk-s1-typography/runtime/iosApp/Demo.xcconfig
-ci/sdk-s1-typography/runtime/iosApp/DemoApp.swift
-ci/sdk-s1-typography/runtime/iosApp/Info.plist
-ci/sdk-s1-typography/runtime/iosApp/MadUIKitDemo.xcodeproj/project.pbxproj
-ci/sdk-s1-typography/runtime/iosApp/MadUIKitDemo.xcodeproj/xcshareddata/xcschemes/MadUIKitDemo.xcscheme
 ci/sdk-s1-typography/runtime/run-host.sh
-ci/sdk-s1-typography/runtime/runtime-proof.py
-ci/sdk-s1-typography/runtime/scripts/ios-framework.sh
-ci/sdk-s1-typography/ui-adopter/composeApp/src/commonMain/kotlin/TypographyAdopter.kt
+ci/sdk-s1-typography/runtime/same-job-framework.py
 FILES
 )"
 test "$changed" = "$expected"
 test "$(git -C ci-input/sdk rev-parse HEAD)" = "$pin"
-gate=intel-host
+gate=arm64-host
 host="$(uname -s)-$(uname -m)"
 macos="$(sw_vers -productVersion)"
-test "$host" = Darwin-x86_64
-[[ "$macos" == 15.* ]]
+test "$host-${ImageOS:?}" = Darwin-arm64-macos26
+[[ "$macos" == 26.* ]]
+[[ "${ImageVersion:?}" =~ ^[0-9]{8}\.[0-9]{4}\.[0-9]+$ && "$ImageVersion" != 20261118.0550.1 ]]
 printf '%s\n' "demo=$(git rev-parse HEAD)" "sdk=$pin" "image=${ImageVersion:?}" "host=$host" "macos=$macos" > "$out/source.txt"
 gate=link-host-memory
 host_memory_bytes="$(sysctl -n hw.memsize)"
 [[ "$host_memory_bytes" =~ ^[1-9][0-9]{9,11}$ ]]
 printf 'physicalMemoryBytes=%s\n' "$host_memory_bytes" > "$out/link-host-memory.txt"
-(( host_memory_bytes >= 12884901888 ))
+(( host_memory_bytes >= 7000000000 ))
 gate=stock-apple-toolchain
 java -version > "$out/java.txt" 2>&1
 grep -E 'version "17\.' "$out/java.txt"
-export DEVELOPER_DIR=/Applications/Xcode_26.0.1.app/Contents/Developer
+export DEVELOPER_DIR=/Applications/Xcode_26.4.1.app/Contents/Developer
 test -d "$DEVELOPER_DIR"
 xcodebuild -version > "$out/xcode.txt"
-grep -Fx 'Xcode 26.0.1' "$out/xcode.txt"
-grep -Fx 'Build version 17A400' "$out/xcode.txt"
+grep -Fx 'Xcode 26.4.1' "$out/xcode.txt"
+grep -Fx 'Build version 17E202' "$out/xcode.txt"
 for apple in iphoneos iphonesimulator; do
   sdk_path="$(xcrun --sdk "$apple" --show-sdk-path)"
   test -d "$sdk_path"
@@ -70,9 +63,11 @@ for apple in iphoneos iphonesimulator; do
   developer_path="$(cd "$DEVELOPER_DIR" && pwd -P)"
   [[ "$sdk_path" == "$developer_path"/Platforms/* ]]
   sdk_version="$(xcrun --sdk "$apple" --show-sdk-version)"
-  test "$sdk_version" = 26.0
+  test "$sdk_version" = 26.4
   printf '%s=%s\n' "$apple" "$sdk_version" >> "$out/xcode.txt"
 done
+gate=no-active-guest-before-build
+xcrun simctl list devices -j | python3 "$ci/runtime/same-job-framework.py" check-guests
 export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:?Android SDK required}}"
 gate=android-sdk36-stock
 test -f "$ANDROID_HOME/platforms/android-36/android.jar"
@@ -130,7 +125,7 @@ conf=iosSimulatorArm64CompileKlibraries
 ios_probe ios-resolve 240 bash gradlew "${flags[@]}" "${options[@]}" "-PmadCompileConfiguration=$conf" :composeApp:verifySdkCompile
 cp "composeApp/build/reports/sdk-maduikit-components-$conf.txt" "$out/ui-$conf.txt"
 ios_probe ios-compile 300 bash gradlew "${flags[@]}" "${options[@]}" :composeApp:compileKotlinIosSimulatorArm64
-ios_probe ios-framework 420 bash gradlew "${flags[@]}" "${options[@]}" --stacktrace \
+ios_probe ios-framework 420 bash gradlew "${flags[@]}" "${options[@]}" --stacktrace --max-workers=1 \
   "-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=384m -XX:-HeapDumpOnOutOfMemoryError" \
   --init-script "$ci/verify-link-heap.init.gradle" :composeApp:linkDebugFrameworkIosSimulatorArm64
 gate=linked-heap-proof
@@ -153,9 +148,13 @@ shasum -a 256 "$framework" > "$out/ui-ios-framework.sha256"
 gate=stage-immutable-after-ui-adopter
 python3 "$ci/verify-stage.py" "$stage" > "$out/stage-after-ui.json"
 cmp "$out/stage-before.json" "$out/stage-after-ui.json"
-gate=synthetic-framework-transfer
-transfer="$RUNNER_TEMP/mad-s1-runtime-transfer"
-mkdir "$transfer"
+gate=same-job-framework-provenance
+proof="$work/same-job-framework.json"
 sha(){ shasum -a 256 "$1" | awk '{print $1}'; }
-python3 "$ci/runtime/framework-transfer.py" pack "$(dirname "$framework")" "$transfer/framework.zip" "$transfer/transfer.json"   "${GITHUB_SHA:?}" "${GITHUB_RUN_ID:?}" "${GITHUB_RUN_ATTEMPT:?}"   --binary-sha "$(awk '{print $1}' "$out/ui-ios-framework.sha256")"   --graph-sha "$(sha "$out/ui-iosSimulatorArm64CompileKlibraries.txt")"   --caller-sha "$(awk '{print $1}' "$out/ui-caller.sha256")" --stage-sha "$(sha "$out/stage-before.json")"
-gate=verified-ui-ios-simulator-framework-build-and-transfer-only
+python3 "$ci/runtime/same-job-framework.py" record "$(dirname "$framework")" "$proof" \
+  "$(awk '{print $1}' "$out/ui-ios-framework.sha256")" \
+  "$(sha "$out/ui-iosSimulatorArm64CompileKlibraries.txt")" \
+  "$(awk '{print $1}' "$out/ui-caller.sha256")" "$(sha "$out/stage-before.json")"
+gate=same-job-synthetic-native-host
+(cd "$root"; bash "$ci/runtime/run-host.sh" "$(dirname "$framework")" "$proof")
+gate=verified-synthetic-native-launch-and-tap-only
