@@ -7,7 +7,7 @@ mkdir "$out"
 gate=preflight
 work="$(mktemp -d "$RUNNER_TEMP/mad-s1.XXXXXX")"
 work="$(cd "$work" && pwd -P)"
-trap 'rc=$?; printf "gate=%s\nexit=%s\nscope=synthetic iOS simulator launch and tap only; no Android adopter, Harmony, or measured typography and spacing assertions\n" "$gate" "$rc" > "$out/result.txt"; exit "$rc"' EXIT
+trap 'rc=$?; printf "gate=%s\nexit=%s\nscope=synthetic iOS simulator typography and spacing only; previous tap proof separate; no Android or Harmony adoption\n" "$gate" "$rc" > "$out/result.txt"; exit "$rc"' EXIT
 runlog(){
   gate="$1"; local bound="$2"; shift 2
   printf 'Checkpoint: %s (%s s)\n' "$gate" "$bound"
@@ -21,8 +21,8 @@ runlog(){
   printf '%s\t%s\t%s\n' "$gate" "$rc" "$detail" >> "$out/checkpoints.tsv"
   return "$rc"
 }
-base=fcbb01b8cd68cf1b4b6d115a98f407ea19162115
-branch=refs/heads/ci/sdk-s1-ui-ios-local-runtime-module
+base=d0e2a25490c6d49e4fcdaf7c53b3aa751337382e
+branch=refs/heads/ci/sdk-s1-ui-ios-native-metrics
 test "${GITHUB_REF:?}" = "$branch"
 pin=19c8c1b1fbe75b7d6a6118fdab42048948de091b
 test "$(git rev-parse HEAD^)" = "$base"
@@ -30,8 +30,13 @@ changed="$(git diff --name-only "$base" HEAD | LC_ALL=C sort)"
 expected="$(cat <<'FILES'
 .github/workflows/sdk-s1-typography.yml
 ci/sdk-s1-typography/run.sh
+ci/sdk-s1-typography/runtime/iosApp/BookFilterUITests.swift
+ci/sdk-s1-typography/runtime/iosApp/DemoApp.swift
+ci/sdk-s1-typography/runtime/metric-proof.py
 ci/sdk-s1-typography/runtime/run-host.sh
-ci/sdk-s1-typography/runtime/same-job-framework.py
+ci/sdk-s1-typography/ui-adopter/composeApp/build.gradle.kts
+ci/sdk-s1-typography/ui-adopter/composeApp/src/iosMain/kotlin/FixtureViewController.kt
+ci/sdk-s1-typography/ui-adopter/composeApp/src/iosMain/kotlin/TypographyMetrics.kt
 FILES
 )"
 test "$changed" = "$expected"
@@ -152,12 +157,15 @@ cmp "$out/stage-before.json" "$out/stage-after-ui.json"
 gate=same-job-framework-size-diagnostic
 python3 "$ci/runtime/same-job-framework.py" measure "$(dirname "$framework")" > "$out/local-framework-sizes.json"
 gate=same-job-framework-provenance
+metric_sources="$work/native-metric-sources.json"
 proof="$work/same-job-framework.json"
 sha(){ shasum -a 256 "$1" | awk '{print $1}'; }
 python3 "$ci/runtime/same-job-framework.py" record "$(dirname "$framework")" "$proof" \
   "$(awk '{print $1}' "$out/ui-ios-framework.sha256")" \
   "$(sha "$out/ui-iosSimulatorArm64CompileKlibraries.txt")" \
   "$(awk '{print $1}' "$out/ui-caller.sha256")" "$(sha "$out/stage-before.json")"
+gate=native-metric-sources
+python3 "$ci/runtime/metric-proof.py" bind "$adopter" "$ci/runtime/iosApp" "$proof" "$metric_sources"
 gate=same-job-synthetic-native-host
-(cd "$root"; bash "$ci/runtime/run-host.sh" "$(dirname "$framework")" "$proof")
-gate=verified-synthetic-native-launch-and-tap-only
+(cd "$root"; bash "$ci/runtime/run-host.sh" "$(dirname "$framework")" "$proof" "$adopter" "$metric_sources")
+gate=verified-synthetic-native-typography-and-spacing-only

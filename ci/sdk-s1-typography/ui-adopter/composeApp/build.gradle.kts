@@ -11,6 +11,8 @@ kotlin {
     if (providers.gradleProperty("madApple").orNull == "true") {
         iosArm64()
         iosSimulatorArm64 { binaries.framework { baseName = "MadUIKitS1Adopter"; isStatic = true } }
+        // Independent Material oracle, isolated to this synthetic Apple fixture.
+        sourceSets.iosMain.dependencies { implementation("org.jetbrains.compose.material3:material3:1.9.0") }
     }
     jvmToolchain(17)
     sourceSets.commonMain.dependencies { implementation("com.mad.maduikit:$sdkEntry:$sdkVersion") }

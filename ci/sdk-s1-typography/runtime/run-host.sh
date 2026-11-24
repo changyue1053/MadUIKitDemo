@@ -8,9 +8,9 @@ mkdir "$out"
 work="$(mktemp -d "$RUNNER_TEMP/mad-s1-runtime.XXXXXX")"
 work="$(cd "$work" && pwd -P)"
 gate=stock-arm-host
-trap 'rc=$?; printf "gate=%s\nexit=%s\nscope=synthetic iosSimulatorArm64 only\n" "$gate" "$rc" > "$out/result.txt"; exit "$rc"' EXIT
+trap 'rc=$?; printf "gate=%s\nexit=%s\nscope=synthetic iosSimulatorArm64 metrics only\n" "$gate" "$rc" > "$out/result.txt"; exit "$rc"' EXIT
 runlog(){ gate="$1"; local t="$2"; shift 2; python3 "$ci/bounded.py" "$t" "$work/$gate.log" "$@"; }
-test "${GITHUB_REF:?}" = refs/heads/ci/sdk-s1-ui-ios-local-runtime-module
+test "${GITHUB_REF:?}" = refs/heads/ci/sdk-s1-ui-ios-native-metrics
 test "$(git rev-parse HEAD)" = "${GITHUB_SHA:?}"
 test "$(uname -s)-$(uname -m)-${ImageOS:?}" = Darwin-arm64-macos26
 image="${ImageVersion:?}"
@@ -27,6 +27,9 @@ cp -R "$ci/runtime/iosApp" "$work/iosApp"
 cp -R "$ci/runtime/scripts" "$work/scripts"
 local_framework="${1:?}"
 proof="${2:?}"
+adopter="${3:?}"
+metric_sources="${4:?}"
+python3 "$ci/runtime/metric-proof.py" verify "$adopter" "$work/iosApp" "$proof" "$metric_sources"
 python3 "$ci/runtime/same-job-framework.py" verify "$local_framework" "$proof"
 mkdir "$work/framework"
 framework="$work/framework/MadUIKitS1Adopter.framework"
@@ -89,14 +92,13 @@ cmp "$out/guest-booted.json" "$work/guest-before-test.json"
 xc="$work/ui.xcresult"
 runlog test 360 xcodebuild -xctestrun "$test_run" -destination "platform=iOS Simulator,id=$sim" \
  -parallel-testing-enabled NO -resultBundlePath "$xc" \
- -only-testing:MadUIKitDemoUITests/BookFilterUITests/testIndependentConsumer test-without-building
+ -only-testing:MadUIKitDemoUITests/TypographyMetricsUITests/testSyntheticNativeMetrics test-without-building
 gate=proven-original-attachments
 xcrun xcresulttool get test-results summary --path "$xc" > "$work/summary.json"
 mkdir "$work/attachments" "$work/verified"
 xcrun xcresulttool export attachments --path "$xc" --output-path "$work/attachments"
-python3 "$ci/runtime/runtime-proof.py" "$work/summary.json" "$work/attachments" "$work/verified" "$proof"
-for name in S1-typography-before S1-typography-after; do
-  runlog "imageio-$name" 45 "$validator" "$work/verified/$name.png" books
-done
-cp "$work/verified/"{S1-typography-before.png,S1-typography-after.png,runtime.json} "$out/"
-gate=verified-native-ios-synthetic-typography
+python3 "$ci/runtime/metric-proof.py" verify "$adopter" "$work/iosApp" "$proof" "$metric_sources"
+python3 "$ci/runtime/metric-proof.py" accept "$work/summary.json" "$work/attachments" "$work/verified" "$proof" "$metric_sources"
+runlog metrics-imageio 45 "$validator" "$work/verified/S1-typography-metrics-original.png" books
+cp "$work/verified/"{S1-typography-metrics-original.png,native-metrics.json} "$out/"
+gate=verified-native-ios-synthetic-metrics

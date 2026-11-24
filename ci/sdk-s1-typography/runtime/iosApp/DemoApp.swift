@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 import UIKit
 import MadUIKitS1Adopter
@@ -11,7 +12,10 @@ struct MadUIKitDemoApp: App {
 
 struct DemoComposeView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
-        FixtureViewControllerKt.fixtureViewController()
+        if ProcessInfo.processInfo.arguments.contains("--s1-metrics") {
+            return FixtureViewControllerKt.metricsViewController()
+        }
+        return FixtureViewControllerKt.fixtureViewController()
     }
 
     func updateUIViewController(_ viewController: UIViewController, context: Context) {}
