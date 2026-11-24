@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd -P)"
-parent=8f386c28d1b5709f3ce57adae2912993c1f8222f
-sdk_pin=cec44952263f528bb3775f0af63af51b4a04b621
-version=0.1.0-alpha03-sdk-preview01
-test "${GITHUB_REF:-}" = refs/heads/ci/sdk-alpha03-source-composite
+parent=83080e6daa5ac84ea28d8958edffd18da2890c5f
+sdk_pin=49f2c1f07bccaf2036ed5bdafe53d6412da45668
+version=0.1.0-alpha06-sdk-preview01
+test "${GITHUB_REF:-}" = refs/heads/ci/sdk-alpha06-source-composite
 [[ "${GITHUB_SHA:-}" =~ ^[0-9a-f]{40}$ && "${GITHUB_RUN_ID:-}" =~ ^[0-9]{1,20}$ && "${GITHUB_RUN_ATTEMPT:-}" =~ ^[0-9]{1,20}$ ]]
 tmp="$(cd "${RUNNER_TEMP:?}" && pwd -P)"
 out="$tmp/mad-source-composite-receipt"
@@ -34,12 +34,19 @@ def category(file, key, vocabulary):
         return value if isinstance(value,str) and value in vocabulary else "unclassified"
     except FileNotFoundError:return "not-run"
     except (OSError,ValueError,KeyError):return "unclassified"
+def fingerprint(name):
+    try:
+        value=(w/name).read_text().strip()
+        return value if len(value)==64 and all(c in "0123456789abcdef" for c in value) else None
+    except OSError:return None
 r=dict(run=os.environ["GITHUB_RUN_ID"],attempt=os.environ["GITHUB_RUN_ATTEMPT"],demoCommit=os.environ["GITHUB_SHA"],
  sdkCommit=sdk,version=ver,exit=int(code),gate=gate,
  stockStatus=category("stock-status.txt",None,known_stock),
  gradleFailureCategory=category("gradle-category.json","publisherCategory",known_cause),
  selectedSourceRoots=["maduikit-components","maduikit-theme"] if root=="yes" else [],
  probeClassCompiled=compiled=="yes",
+ verifiedCalls=["MadSwitch","MadIcon","MadIconButton"] if compiled=="yes" else [],
+ probeSourceSha256=fingerprint("source-sha"),probeClassSha256=fingerprint("class-sha"),
  scope="synthetic Android source-composite compile only; no Maven publication, native link or execution")
 p.write_text(json.dumps(r,sort_keys=True,indent=2)+"\n")
 PY
@@ -60,7 +67,16 @@ trap finish EXIT
 exec > "$w/private.log" 2>&1
 test "$(git rev-parse HEAD^)" = "$parent"
 test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-git diff --exit-code "$parent" HEAD -- . ':!.github/workflows/sdk-alpha03-source-composite.yml' ':!ci/sdk-source-composite/'
+changed="$(git diff --name-only "$parent" HEAD | LC_ALL=C sort)"
+expected="$(cat <<'FILES'
+.github/workflows/sdk-alpha06-source-composite.yml
+ci/sdk-source-composite/composite/composeApp/build.gradle.kts
+ci/sdk-source-composite/composite/composeApp/src/commonMain/kotlin/ControlsProbe.kt
+ci/sdk-source-composite/composite/settings.gradle.kts
+ci/sdk-source-composite/run.sh
+FILES
+)"
+test "$changed" = "$expected"
 test "$(git -C ci-input/sdk rev-parse HEAD)" = "$sdk_pin"
 gate=stock-tools
 python3 "$here/stock-env.py" "$w"
@@ -93,7 +109,13 @@ grep -Fxq SOURCE_COMPOSITE_ROOTS_VERIFIED "$w/gradle.log"
 root_verified=yes
 gate=check-actual-compile-output
 grep -Fxq '> Task :composeApp:compileDebugKotlinAndroid' "$w/gradle.log"
-class="$(find "$w/app/composeApp/build" -type f -path '*/dev/mad/synthetic/typography/TextStyleProbeKt.class' -print)"
+class="$(find "$w/app/composeApp/build" -type f -path '*/dev/mad/synthetic/typography/ControlsProbeKt.class' -print)"
 test -n "$class" && test -s "$class"
+"$JAVA_HOME/bin/javap" -c -p "$class" > "$w/probe.javap"
+grep -E 'invokestatic[[:space:]].*com/mad/maduikit/MadSwitchKt\.MadSwitch:' "$w/probe.javap" >/dev/null
+grep -E 'invokestatic[[:space:]].*com/mad/maduikit/MadIconKt\."?MadIcon-[A-Za-z0-9_-]+"?:' "$w/probe.javap" >/dev/null
+grep -E 'invokestatic[[:space:]].*com/mad/maduikit/MadIconKt\.MadIconButton:' "$w/probe.javap" >/dev/null
+shasum -a 256 "$class" | awk '{print $1}' > "$w/class-sha"
+shasum -a 256 composeApp/src/commonMain/kotlin/ControlsProbe.kt | awk '{print $1}' > "$w/source-sha"
 compiled=yes
 gate=android-source-composite-compile-passed

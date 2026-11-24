@@ -1,0 +1,37 @@
+name: Exact MadUIKit alpha06 source composite Android compile
+on:
+  push:
+    branches: [ci/sdk-alpha06-source-composite]
+    paths:
+      - '.github/workflows/sdk-alpha06-source-composite.yml'
+      - 'ci/sdk-source-composite/**'
+permissions: {contents: read}
+concurrency:
+  group: sdk-alpha06-source-composite
+  cancel-in-progress: false
+jobs:
+  source:
+    if: >-
+      github.repository == 'changyue1053/MadUIKitDemo' &&
+      github.ref == 'refs/heads/ci/sdk-alpha06-source-composite' &&
+      contains(github.event.head_commit.message, 'MADSDK_SOURCE_SMOKE_REVIEWED: 49f2c1f07bccaf2036ed5bdafe53d6412da45668')
+    runs-on: macos-15-intel
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false, fetch-depth: 2}
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: changyue1053/MadUIKit
+          ref: 49f2c1f07bccaf2036ed5bdafe53d6412da45668
+          path: ci-input/sdk
+          persist-credentials: false
+      - name: Check stock tools, resolve exact source, and compile Android only
+        run: bash ci/sdk-source-composite/run.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: MadUIKit-alpha06-Android-Source-Composite-Receipt-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/mad-source-composite-receipt/composite-status.json
+          if-no-files-found: warn
+          retention-days: 7
