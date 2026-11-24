@@ -1,17 +1,17 @@
 name: Synthetic S1 iOS compile and framework diagnostic
 on:
   push:
-    branches: [ci/sdk-s1-ui-ios-link-causal]
+    branches: [ci/sdk-s1-ui-ios-link-heap]
     paths:
       - '.github/workflows/sdk-s1-typography.yml'
       - 'ci/sdk-s1-typography/**'
 permissions: {contents: read}
 concurrency:
-  group: sdk-s1-ui-ios-link-causal
+  group: sdk-s1-ui-ios-link-heap
   cancel-in-progress: false
 jobs:
   stage-compile:
-    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-s1-ui-ios-link-causal'
+    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-s1-ui-ios-link-heap'
     runs-on: macos-15-intel
     timeout-minutes: 39
     steps:
@@ -30,7 +30,24 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: S1-ui-ios-link-causal-evidence-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/mad-s1-evidence/
+          name: S1-ui-ios-link-heap-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/mad-s1-evidence/result.txt
+            ${{ runner.temp }}/mad-s1-evidence/source.txt
+            ${{ runner.temp }}/mad-s1-evidence/link-host-memory.txt
+            ${{ runner.temp }}/mad-s1-evidence/java.txt
+            ${{ runner.temp }}/mad-s1-evidence/xcode.txt
+            ${{ runner.temp }}/mad-s1-evidence/checkpoints.tsv
+            ${{ runner.temp }}/mad-s1-evidence/overlay.sha256
+            ${{ runner.temp }}/mad-s1-evidence/publisher-configured
+            ${{ runner.temp }}/mad-s1-evidence/stage-before.json
+            ${{ runner.temp }}/mad-s1-evidence/stage-after-ui.json
+            ${{ runner.temp }}/mad-s1-evidence/ui-caller.sha256
+            ${{ runner.temp }}/mad-s1-evidence/ui-iosSimulatorArm64CompileKlibraries.txt
+            ${{ runner.temp }}/mad-s1-evidence/ios-resolve.json
+            ${{ runner.temp }}/mad-s1-evidence/ios-compile.json
+            ${{ runner.temp }}/mad-s1-evidence/ios-framework.json
+            ${{ runner.temp }}/mad-s1-evidence/ui-ios-platform.txt
+            ${{ runner.temp }}/mad-s1-evidence/ui-ios-framework.sha256
           if-no-files-found: warn
           retention-days: 7

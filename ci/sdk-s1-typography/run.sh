@@ -20,8 +20,8 @@ runlog(){
   printf '%s\t%s\t%s\n' "$gate" "$rc" "$detail" >> "$out/checkpoints.tsv"
   return "$rc"
 }
-base=0d85fb3688c22f213738b4cd2081c655b7a7002f
-branch=refs/heads/ci/sdk-s1-ui-ios-link-causal
+base=9dae64cb14747f8f172373dcb0bd5a260e204102
+branch=refs/heads/ci/sdk-s1-ui-ios-link-heap
 test "${GITHUB_REF:?}" = "$branch"
 pin=19c8c1b1fbe75b7d6a6118fdab42048948de091b
 test "$(git rev-parse HEAD^)" = "$base"
@@ -30,6 +30,7 @@ expected="$(cat <<'FILES'
 .github/workflows/sdk-s1-typography.yml
 ci/sdk-s1-typography/run.sh
 ci/sdk-s1-typography/sanitize-ios.py
+ci/sdk-s1-typography/verify-link-heap.init.gradle
 FILES
 )"
 test "$changed" = "$expected"
@@ -40,6 +41,11 @@ macos="$(sw_vers -productVersion)"
 test "$host" = Darwin-x86_64
 [[ "$macos" == 15.* ]]
 printf '%s\n' "demo=$(git rev-parse HEAD)" "sdk=$pin" "image=${ImageVersion:?}" "host=$host" "macos=$macos" > "$out/source.txt"
+gate=link-host-memory
+host_memory_bytes="$(sysctl -n hw.memsize)"
+[[ "$host_memory_bytes" =~ ^[1-9][0-9]{9,11}$ ]]
+printf 'physicalMemoryBytes=%s\n' "$host_memory_bytes" > "$out/link-host-memory.txt"
+(( host_memory_bytes >= 12884901888 ))
 gate=stock-apple-toolchain
 java -version > "$out/java.txt" 2>&1
 grep -E 'version "17\.' "$out/java.txt"
@@ -115,7 +121,18 @@ conf=iosSimulatorArm64CompileKlibraries
 ios_probe ios-resolve 240 bash gradlew "${flags[@]}" "${options[@]}" "-PmadCompileConfiguration=$conf" :composeApp:verifySdkCompile
 cp "composeApp/build/reports/sdk-maduikit-components-$conf.txt" "$out/ui-$conf.txt"
 ios_probe ios-compile 300 bash gradlew "${flags[@]}" "${options[@]}" :composeApp:compileKotlinIosSimulatorArm64
-ios_probe ios-framework 420 bash gradlew "${flags[@]}" "${options[@]}" --stacktrace :composeApp:linkDebugFrameworkIosSimulatorArm64
+ios_probe ios-framework 420 bash gradlew "${flags[@]}" "${options[@]}" --stacktrace \
+  "-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=384m -XX:-HeapDumpOnOutOfMemoryError" \
+  --init-script "$ci/verify-link-heap.init.gradle" :composeApp:linkDebugFrameworkIosSimulatorArm64
+gate=linked-heap-proof
+python3 - "$out/ios-framework.json" <<'PYHEAP'
+import json, sys
+from pathlib import Path
+d = json.loads(Path(sys.argv[1]).read_text())
+v = d.get("effectiveLinkHeapBytes")
+if type(v) is not int or not 3758096384 <= v <= 4563402752:
+    raise SystemExit("Missing or out-of-bounds in-task heap receipt")
+PYHEAP
 gate=ui-ios-framework-validation
 framework=composeApp/build/bin/iosSimulatorArm64/debugFramework/MadUIKitS1Adopter.framework/MadUIKitS1Adopter
 test -s "$framework"

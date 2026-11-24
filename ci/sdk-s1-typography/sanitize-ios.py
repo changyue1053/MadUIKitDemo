@@ -15,7 +15,7 @@ PREFIX = r"(?im)^\s*(?:(?:[ewi]:|\[ERROR\]|error:|warning:)\s*)*"
 RULES = (
     ("unresolved-kotlin-reference", re.compile(PREFIX + r"e:.*\bUnresolved reference\b")),
     ("kotlin-source-error", re.compile(PREFIX + r"e:.*(?:\.kt:|\.kt\s*\()")),
-    ("out-of-memory", re.compile(r"(?im)\b(?:java\.lang\.OutOfMemoryError|GC overhead limit exceeded|Java heap space|LLVM ERROR: out of memory|std::bad_alloc)\b")),
+    ("out-of-memory", re.compile(r"(?im)\b(?:java\.lang\.OutOfMemoryError|GC overhead limit exceeded|Java heap space|LLVM ERROR: out of memory|std::bad_alloc|unable to create (?:new )?native thread|Native memory allocation \(mmap\) failed|Direct buffer memory)\b")),
     ("native-linker", re.compile(PREFIX + r"(?:ld:|Undefined symbols for architecture|clang(?:\+\+)?: error: linker command failed)")),
     ("apple-sdk-toolchain", re.compile(PREFIX + r"(?:xcrun: error:|xcode-select: error:|SDK\b.*\b(?:cannot be located|not found|could not be found)|unable to find utility)")),
     ("native-compiler", re.compile(PREFIX + r"(?:LLVM ERROR:|Konan compilation failed|IrLinkageError\b)")),
@@ -63,11 +63,33 @@ def classify(log, code):
     category = next(iter(primary)) if len(primary) == 1 else ("ambiguous" if primary else "unclassified")
     return task, category, sorted(kinds), causes
 
+HEAP_PROOF = re.compile(r"(?m)^MAD_S1_EFFECTIVE_LINK_HEAP_BYTES=([1-9][0-9]{9})$")
+OOM_SUBTYPES = {
+    "jvm-heap": re.compile(r"(?i)\b(?:Java heap space|GC overhead limit exceeded|Requested array size exceeds VM limit)\b"),
+    "metaspace": re.compile(r"(?im)(?:OutOfMemoryError:|^e:)\s*(?:Metaspace|Compressed class space)\b"),
+    "native-thread": re.compile(r"(?i)\bunable to create (?:new )?native thread\b"),
+    "native-allocation": re.compile(r"(?i)\b(?:LLVM ERROR: out of memory|std::bad_alloc|Native memory allocation \(mmap\) failed|Direct buffer memory)\b"),
+}
+
+def extra_link_fields(gate, log, signatures):
+    if gate != "ios-framework":
+        return {}
+    values = HEAP_PROOF.findall(log)
+    heap = int(values[0]) if len(values) == 1 else None
+    if heap is not None and not 3758096384 <= heap <= 4563402752:
+        heap = None
+    subtype = None
+    if "out-of-memory" in signatures:
+        matches = [name for name, rule in OOM_SUBTYPES.items() if rule.search(log)]
+        subtype = matches[0] if len(matches) == 1 else "ambiguous" if matches else "unspecified"
+    return {"effectiveLinkHeapBytes": heap, "oomSubtype": subtype}
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("gate", choices=["ios-resolve", "ios-compile", "ios-framework"])
     parser.add_argument("code", type=int, choices=range(256))
     parser.add_argument("log", type=Path)
     args = parser.parse_args()
-    task, category, signatures, causes = classify(args.log.read_text(errors="replace"), args.code)
-    print(json.dumps({"gate": args.gate, "exit": args.code, "firstFailedTask": task, "diagnosticCategory": category, "signatureKinds": signatures, "allowlistedCauseKinds": causes}, sort_keys=True))
+    log = args.log.read_text(errors="replace")
+    task, category, signatures, causes = classify(log, args.code)
+    print(json.dumps({"gate": args.gate, "exit": args.code, "firstFailedTask": task, "diagnosticCategory": category, "signatureKinds": signatures, "allowlistedCauseKinds": causes, **extra_link_fields(args.gate, log, signatures)}, sort_keys=True))

@@ -1,0 +1,25 @@
+import java.lang.management.ManagementFactory
+
+gradle.beforeProject { project ->
+    if (project.path != ':composeApp') return
+    project.tasks.matching { it.name == 'linkDebugFrameworkIosSimulatorArm64' }.configureEach {
+        doFirst {
+            def fork = project.findProperty('kotlin.native.disableCompilerDaemon')?.toString()
+            if (fork != null && !fork.equalsIgnoreCase('false')) {
+                throw new GradleException('Native compiler fork mode is not authorized')
+            }
+            def args = ManagementFactory.runtimeMXBean.inputArguments
+            if (args.findAll { it.startsWith('-Xmx') } != ['-Xmx4g'] ||
+                args.findAll { it.startsWith('-XX:MaxMetaspaceSize=') } != ['-XX:MaxMetaspaceSize=384m'] ||
+                !args.contains('-XX:-HeapDumpOnOutOfMemoryError') ||
+                args.contains('-XX:+HeapDumpOnOutOfMemoryError')) {
+                throw new GradleException('Unexpected scoped link JVM policy')
+            }
+            long heap = Runtime.runtime.maxMemory()
+            if (heap < 3758096384L || heap > 4563402752L) {
+                throw new GradleException('Unexpected effective link JVM heap')
+            }
+            println("MAD_S1_EFFECTIVE_LINK_HEAP_BYTES=${heap}")
+        }
+    }
+}
