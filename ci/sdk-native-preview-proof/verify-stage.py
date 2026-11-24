@@ -1,5 +1,5 @@
 """Verify a once-produced SDK publication without touching Gradle or importing archives."""
-import hashlib, json, re, sys, zipfile, xml.etree.ElementTree as ET
+import hashlib, json, os, re, sys, zipfile, xml.etree.ElementTree as ET
 from pathlib import Path
 stage=Path(sys.argv[1]); base=stage/'com/mad/maduikit'; ver='0.1.0-alpha03-sdk-preview01'
 def require(ok,reason):
@@ -32,8 +32,16 @@ for mod in ('components','theme'):
   leaf=f'{name}-{target}'; folder=base/leaf/ver; file=folder/f'{leaf}-{ver}.{ext}'
   check_pom(folder,leaf)
   n=readmod(folder,leaf); h=sha(file)
-  require((n['component']['group'],n['component']['module'],n['component']['version'])==
-          ('com.mad.maduikit',leaf,ver),'leaf coordinate')
+  # A Gradle module leaf has a component back-reference to its owning root;
+  # its POM, the root's available-at redirect, and artifact path identify the leaf.
+  component=n['component']
+  require((component['group'],component['module'],component['version'])==
+          ('com.mad.maduikit',name,ver),'leaf component root coordinate')
+  owner=root/f'{name}-{ver}.module'
+  expected=os.path.relpath(owner,folder).replace(os.sep,'/')
+  require(component.get('url')==expected and owner.is_file()
+          and (folder/expected).resolve()==owner.resolve()
+          and owner.resolve().is_relative_to(stage.resolve()),'noncanonical or escaping leaf component backref')
   require((folder/(file.name+'.sha256')).read_text().strip()==h,'leaf SHA sidecar')
   for vn in variants:
    rv,=[v for v in r['variants'] if v['name']==vn]

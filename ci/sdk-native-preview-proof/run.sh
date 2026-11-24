@@ -6,11 +6,11 @@ version=0.1.0-alpha03-sdk-preview01
 sdk_repo="$(cd "${1:?supply SDK Git checkout}" && pwd -P)"
 out="$(cd "${2:?supply unique empty receipt directory}" && pwd -P)"
 test -z "$(ls -A "$out")"
-demo_base=8f386c28d1b5709f3ce57adae2912993c1f8222f
+demo_base=33efb551fdbb309f76f66a49abf4ecd49bb5d8e9
 demo="$(cd "$here/../.." && pwd -P)"
 test "$(git -C "$demo" rev-parse HEAD^)" = "$demo_base"
-git -C "$demo" diff --exit-code "$demo_base" HEAD -- . ':!.github/workflows/sdk-native-preview-proof.yml' ':!ci/sdk-native-preview-proof' > /dev/null
-test "${GITHUB_REF:-}" = refs/heads/ci/sdk-native-preview-proof
+git -C "$demo" diff --exit-code "$demo_base" HEAD -- . ':!.github/workflows/sdk-native-preview-proof.yml' ':!ci/sdk-native-preview-proof/run.sh' ':!ci/sdk-native-preview-proof/verify-stage.py' > /dev/null
+test "${GITHUB_REF:-}" = refs/heads/ci/sdk-native-preview-backref
 test "$(git -C "$demo" rev-parse HEAD)" = "${GITHUB_SHA:?}"
 [[ "${GITHUB_RUN_ID:-}" =~ ^[0-9]+$ && "${GITHUB_RUN_ATTEMPT:-}" =~ ^[0-9]+$ ]]
 

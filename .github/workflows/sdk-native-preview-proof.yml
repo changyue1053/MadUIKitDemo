@@ -1,18 +1,18 @@
 name: SDK-native alpha03 synthetic Maven provenance (receipt only)
 on:
   push:
-    branches: [ci/sdk-native-preview-proof]
+    branches: [ci/sdk-native-preview-backref]
     paths:
       - '.github/workflows/sdk-native-preview-proof.yml'
       - 'ci/sdk-native-preview-proof/**'
 permissions: {contents: read}
 concurrency:
-  group: sdk-native-preview-proof
+  group: sdk-native-preview-backref
   cancel-in-progress: false
 jobs:
   proof:
     if: >-
-      github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-native-preview-proof' && contains(github.event.head_commit.message, 'MADSDK_RUN_APPROVED: cec44952263f528bb3775f0af63af51b4a04b621')
+      github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-native-preview-backref' && contains(github.event.head_commit.message, 'MADSDK_RUN_APPROVED: cec44952263f528bb3775f0af63af51b4a04b621')
     runs-on: macos-15-intel
     timeout-minutes: 55
     steps:
