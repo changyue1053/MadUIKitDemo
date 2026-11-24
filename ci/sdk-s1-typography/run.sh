@@ -20,12 +20,24 @@ runlog(){
   printf '%s\t%s\t%s\n' "$gate" "$rc" "$detail" >> "$out/checkpoints.tsv"
   return "$rc"
 }
-base=8e72a9cc84a7fe616be53bca08bab13f0cddc429
-branch=refs/heads/ci/sdk-s1-typography-intel-xcode26
+base=8de4d05b40e83fdb7678b5d868fbcfaae4726e13
+branch=refs/heads/ci/sdk-s1-ui-adopter-build
 test "${GITHUB_REF:?}" = "$branch"
 pin=19c8c1b1fbe75b7d6a6118fdab42048948de091b
 test "$(git rev-parse HEAD^)" = "$base"
-git diff --exit-code "$base" HEAD -- . ':!ci/sdk-s1-typography/run.sh' ':!.github/workflows/sdk-s1-typography.yml'
+changed="$(git diff --name-only "$base" HEAD | LC_ALL=C sort)"
+expected="$(cat <<'FILES'
+.github/workflows/sdk-s1-typography.yml
+ci/sdk-s1-typography/run.sh
+ci/sdk-s1-typography/ui-adopter/composeApp/build.gradle.kts
+ci/sdk-s1-typography/ui-adopter/composeApp/src/androidMain/AndroidManifest.xml
+ci/sdk-s1-typography/ui-adopter/composeApp/src/androidMain/kotlin/FixtureActivity.kt
+ci/sdk-s1-typography/ui-adopter/composeApp/src/commonMain/kotlin/TypographyAdopter.kt
+ci/sdk-s1-typography/ui-adopter/composeApp/src/iosMain/kotlin/FixtureViewController.kt
+ci/sdk-s1-typography/ui-adopter/settings.gradle.kts
+FILES
+)"
+test "$changed" = "$expected"
 test "$(git -C ci-input/sdk rev-parse HEAD)" = "$pin"
 gate=intel-host
 host="$(uname -s)-$(uname -m)"
@@ -109,4 +121,38 @@ done
 gate=stage-immutable
 python3 "$ci/verify-stage.py" "$stage" > "$out/stage-after.json"
 cmp "$out/stage-before.json" "$out/stage-after.json"
-gate=verified-android-and-ios-compile-only
+gate=ui-adopter-source
+adopter="$work/ui-adopter"
+mkdir "$adopter"
+cp -R "$ci/ui-adopter/." "$adopter/"
+cp "$sdk/gradlew" "$adopter/"; cp -R "$sdk/gradle" "$adopter/"
+cd "$adopter"
+export GRADLE_USER_HOME="$work/ui-adopter-gradle"
+test ! -e "$GRADLE_USER_HOME"
+options=("-PmadStage=$stage" -PmadApple=true)
+shasum -a 256 composeApp/src/commonMain/kotlin/TypographyAdopter.kt > "$out/ui-caller.sha256"
+runlog ui-adopter-help 180 bash gradlew "${flags[@]}" "${options[@]}" help
+for conf in debugCompileClasspath debugRuntimeClasspath iosSimulatorArm64CompileKlibraries; do
+  runlog "ui-resolve-$conf" 120 bash gradlew "${flags[@]}" "${options[@]}" "-PmadCompileConfiguration=$conf" :composeApp:verifySdkCompile
+  cp "composeApp/build/reports/sdk-maduikit-components-$conf.txt" "$out/ui-$conf.txt"
+done
+runlog ui-android-apk 300 bash gradlew "${flags[@]}" "${options[@]}" :composeApp:assembleDebug
+gate=ui-android-apk-validation
+apk=composeApp/build/outputs/apk/debug/composeApp-debug.apk
+test -s "$apk"
+unzip -tqq "$apk"
+unzip -Z1 "$apk" | grep -Fx AndroidManifest.xml
+shasum -a 256 "$apk" > "$out/ui-android-apk.sha256"
+runlog ui-ios-framework 420 bash gradlew "${flags[@]}" "${options[@]}" :composeApp:linkDebugFrameworkIosSimulatorArm64
+gate=ui-ios-framework-validation
+framework=composeApp/build/bin/iosSimulatorArm64/debugFramework/MadUIKitS1Adopter.framework/MadUIKitS1Adopter
+test -s "$framework"
+xcrun lipo -archs "$framework" | grep -Fx arm64
+xcrun otool -l "$framework" | awk '/cmd LC_BUILD_VERSION/ { active=1; next } active && $1=="platform" {print $2; active=0}' | sort -u > "$out/ui-ios-platform.txt"
+grep -Ex 'IOSSIMULATOR|7' "$out/ui-ios-platform.txt"
+test "$(wc -l < "$out/ui-ios-platform.txt" | tr -d ' ')" = 1
+shasum -a 256 "$framework" > "$out/ui-ios-framework.sha256"
+gate=stage-immutable-after-ui-adopter
+python3 "$ci/verify-stage.py" "$stage" > "$out/stage-after-ui.json"
+cmp "$out/stage-before.json" "$out/stage-after-ui.json"
+gate=verified-ui-android-apk-and-ios-framework-build-only

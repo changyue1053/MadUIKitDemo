@@ -1,19 +1,19 @@
-name: Synthetic Intel Xcode 26 S1 typography stage and compile (not runtime)
+name: Synthetic S1 UI adopter build (not runtime)
 on:
   push:
-    branches: [ci/sdk-s1-typography-intel-xcode26]
+    branches: [ci/sdk-s1-ui-adopter-build]
     paths:
       - '.github/workflows/sdk-s1-typography.yml'
       - 'ci/sdk-s1-typography/**'
 permissions: {contents: read}
 concurrency:
-  group: sdk-s1-typography-intel-xcode26
+  group: sdk-s1-ui-adopter-build
   cancel-in-progress: false
 jobs:
   stage-compile:
-    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-s1-typography-intel-xcode26'
+    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-s1-ui-adopter-build'
     runs-on: macos-15-intel
-    timeout-minutes: 48
+    timeout-minutes: 65
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with: {persist-credentials: false, fetch-depth: 2}
@@ -30,7 +30,7 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: S1-intel-xcode26-synthetic-compile-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          name: S1-ui-adopter-build-evidence-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/mad-s1-evidence/
           if-no-files-found: warn
           retention-days: 7
