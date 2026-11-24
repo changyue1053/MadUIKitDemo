@@ -20,8 +20,8 @@ runlog(){
   printf '%s\t%s\t%s\n' "$gate" "$rc" "$detail" >> "$out/checkpoints.tsv"
   return "$rc"
 }
-base=af58ef93c18a0092f9000cacb959171356b4afa9
-branch=refs/heads/ci/sdk-s1-ui-ios-runtime
+base=9add2265e06c8a2389a40cf9e4556fda1ca816a1
+branch=refs/heads/ci/sdk-s1-ui-ios-transfer-diagnostic
 test "${GITHUB_REF:?}" = "$branch"
 pin=19c8c1b1fbe75b7d6a6118fdab42048948de091b
 test "$(git rev-parse HEAD^)" = "$base"
@@ -29,17 +29,7 @@ changed="$(git diff --name-only "$base" HEAD | LC_ALL=C sort)"
 expected="$(cat <<'FILES'
 .github/workflows/sdk-s1-typography.yml
 ci/sdk-s1-typography/run.sh
-ci/sdk-s1-typography/runtime/framework-transfer.py
-ci/sdk-s1-typography/runtime/iosApp/BookFilterUITests.swift
-ci/sdk-s1-typography/runtime/iosApp/Demo.xcconfig
-ci/sdk-s1-typography/runtime/iosApp/DemoApp.swift
-ci/sdk-s1-typography/runtime/iosApp/Info.plist
-ci/sdk-s1-typography/runtime/iosApp/MadUIKitDemo.xcodeproj/project.pbxproj
-ci/sdk-s1-typography/runtime/iosApp/MadUIKitDemo.xcodeproj/xcshareddata/xcschemes/MadUIKitDemo.xcscheme
-ci/sdk-s1-typography/runtime/run-host.sh
-ci/sdk-s1-typography/runtime/runtime-proof.py
-ci/sdk-s1-typography/runtime/scripts/ios-framework.sh
-ci/sdk-s1-typography/ui-adopter/composeApp/src/commonMain/kotlin/TypographyAdopter.kt
+ci/sdk-s1-typography/runtime/framework-scan-diagnostic.py
 FILES
 )"
 test "$changed" = "$expected"
@@ -153,9 +143,6 @@ shasum -a 256 "$framework" > "$out/ui-ios-framework.sha256"
 gate=stage-immutable-after-ui-adopter
 python3 "$ci/verify-stage.py" "$stage" > "$out/stage-after-ui.json"
 cmp "$out/stage-before.json" "$out/stage-after-ui.json"
-gate=synthetic-framework-transfer
-transfer="$RUNNER_TEMP/mad-s1-runtime-transfer"
-mkdir "$transfer"
-sha(){ shasum -a 256 "$1" | awk '{print $1}'; }
-python3 "$ci/runtime/framework-transfer.py" pack "$(dirname "$framework")" "$transfer/framework.zip" "$transfer/transfer.json"   "${GITHUB_SHA:?}" "${GITHUB_RUN_ID:?}" "${GITHUB_RUN_ATTEMPT:?}"   --binary-sha "$(awk '{print $1}' "$out/ui-ios-framework.sha256")"   --graph-sha "$(sha "$out/ui-iosSimulatorArm64CompileKlibraries.txt")"   --caller-sha "$(awk '{print $1}' "$out/ui-caller.sha256")" --stage-sha "$(sha "$out/stage-before.json")"
-gate=verified-ui-ios-simulator-framework-build-and-transfer-only
+gate=synthetic-framework-scan-diagnostic
+python3 "$ci/runtime/framework-scan-diagnostic.py" "$(dirname "$framework")" "$ci/runtime/framework-transfer.py" > "$out/framework-scan.json"
+gate=verified-framework-scan-only-no-transfer

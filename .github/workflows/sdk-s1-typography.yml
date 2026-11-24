@@ -1,17 +1,17 @@
-name: Synthetic S1 iOS simulator runtime
+name: Synthetic S1 iOS framework transfer diagnostic only
 on:
   push:
-    branches: [ci/sdk-s1-ui-ios-runtime]
+    branches: [ci/sdk-s1-ui-ios-transfer-diagnostic]
     paths:
       - '.github/workflows/sdk-s1-typography.yml'
       - 'ci/sdk-s1-typography/**'
 permissions: {contents: read}
 concurrency:
-  group: sdk-s1-ui-ios-runtime
+  group: sdk-s1-ui-ios-transfer-diagnostic
   cancel-in-progress: false
 jobs:
   build-framework:
-    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-s1-ui-ios-runtime'
+    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-s1-ui-ios-transfer-diagnostic'
     runs-on: macos-15-intel
     timeout-minutes: 39
     steps:
@@ -30,7 +30,7 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: S1-ui-ios-link-heap-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          name: S1-ios-framework-scan-evidence-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/mad-s1-evidence/result.txt
             ${{ runner.temp }}/mad-s1-evidence/source.txt
@@ -49,46 +49,6 @@ jobs:
             ${{ runner.temp }}/mad-s1-evidence/ios-framework.json
             ${{ runner.temp }}/mad-s1-evidence/ui-ios-platform.txt
             ${{ runner.temp }}/mad-s1-evidence/ui-ios-framework.sha256
-          if-no-files-found: warn
-          retention-days: 7
-
-      - name: Pass verified synthetic static framework to the native host job
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: S1-public-synthetic-framework-transfer-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            ${{ runner.temp }}/mad-s1-runtime-transfer/framework.zip
-            ${{ runner.temp }}/mad-s1-runtime-transfer/transfer.json
-          if-no-files-found: error
-          retention-days: 1
-  arm64-runtime:
-    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-s1-ui-ios-runtime'
-    needs: build-framework
-    runs-on: macos-26
-    timeout-minutes: 26
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-        with: {persist-credentials: false}
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          name: S1-public-synthetic-framework-transfer-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/mad-s1-runtime-inbound
-      - name: Build and run the synthetic consumer exactly once
-        run: bash ci/sdk-s1-typography/runtime/run-host.sh
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        if: always()
-        with:
-          name: S1-ios-synthetic-runtime-evidence-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            ${{ runner.temp }}/mad-s1-runtime-receipt/result.txt
-            ${{ runner.temp }}/mad-s1-runtime-receipt/xcode.txt
-            ${{ runner.temp }}/mad-s1-runtime-receipt/app-plist.json
-            ${{ runner.temp }}/mad-s1-runtime-receipt/framework-platform.txt
-            ${{ runner.temp }}/mad-s1-runtime-receipt/frame-validator.json
-            ${{ runner.temp }}/mad-s1-runtime-receipt/guest-selected.json
-            ${{ runner.temp }}/mad-s1-runtime-receipt/guest-booted.json
-            ${{ runner.temp }}/mad-s1-runtime-receipt/runtime.json
-            ${{ runner.temp }}/mad-s1-runtime-receipt/S1-typography-before.png
-            ${{ runner.temp }}/mad-s1-runtime-receipt/S1-typography-after.png
+            ${{ runner.temp }}/mad-s1-evidence/framework-scan.json
           if-no-files-found: warn
           retention-days: 7
