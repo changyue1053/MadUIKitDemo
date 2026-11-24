@@ -1,17 +1,17 @@
 name: Synthetic S1 iOS compile and framework diagnostic
 on:
   push:
-    branches: [ci/sdk-s1-ui-ios-diagnostic]
+    branches: [ci/sdk-s1-ui-ios-link-causal]
     paths:
       - '.github/workflows/sdk-s1-typography.yml'
       - 'ci/sdk-s1-typography/**'
 permissions: {contents: read}
 concurrency:
-  group: sdk-s1-ui-ios-diagnostic
+  group: sdk-s1-ui-ios-link-causal
   cancel-in-progress: false
 jobs:
   stage-compile:
-    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-s1-ui-ios-diagnostic'
+    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-s1-ui-ios-link-causal'
     runs-on: macos-15-intel
     timeout-minutes: 39
     steps:
@@ -30,7 +30,7 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: S1-ui-ios-diagnostic-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          name: S1-ui-ios-link-causal-evidence-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/mad-s1-evidence/
           if-no-files-found: warn
           retention-days: 7

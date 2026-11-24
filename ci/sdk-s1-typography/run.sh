@@ -20,8 +20,8 @@ runlog(){
   printf '%s\t%s\t%s\n' "$gate" "$rc" "$detail" >> "$out/checkpoints.tsv"
   return "$rc"
 }
-base=d479e156f9f5c75fe15e9022141aa1076db8de81
-branch=refs/heads/ci/sdk-s1-ui-ios-diagnostic
+base=0d85fb3688c22f213738b4cd2081c655b7a7002f
+branch=refs/heads/ci/sdk-s1-ui-ios-link-causal
 test "${GITHUB_REF:?}" = "$branch"
 pin=19c8c1b1fbe75b7d6a6118fdab42048948de091b
 test "$(git rev-parse HEAD^)" = "$base"
@@ -115,7 +115,7 @@ conf=iosSimulatorArm64CompileKlibraries
 ios_probe ios-resolve 240 bash gradlew "${flags[@]}" "${options[@]}" "-PmadCompileConfiguration=$conf" :composeApp:verifySdkCompile
 cp "composeApp/build/reports/sdk-maduikit-components-$conf.txt" "$out/ui-$conf.txt"
 ios_probe ios-compile 300 bash gradlew "${flags[@]}" "${options[@]}" :composeApp:compileKotlinIosSimulatorArm64
-ios_probe ios-framework 420 bash gradlew "${flags[@]}" "${options[@]}" :composeApp:linkDebugFrameworkIosSimulatorArm64
+ios_probe ios-framework 420 bash gradlew "${flags[@]}" "${options[@]}" --stacktrace :composeApp:linkDebugFrameworkIosSimulatorArm64
 gate=ui-ios-framework-validation
 framework=composeApp/build/bin/iosSimulatorArm64/debugFramework/MadUIKitS1Adopter.framework/MadUIKitS1Adopter
 test -s "$framework"
