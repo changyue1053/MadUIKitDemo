@@ -1,7 +1,7 @@
-"""Verify a once-produced SDK publication without touching Gradle or importing archives."""
+"""Verify the disposable simulator-only SDK repository; not a release package."""
 import hashlib, json, re, sys, zipfile
 from pathlib import Path
-stage=Path(sys.argv[1]); base=stage/'com/mad/maduikit'; ver='0.1.0-alpha02'
+stage=Path(sys.argv[1]); base=stage/'com/mad/maduikit'; ver='0.1.0-alpha07-sdk-preview01'
 def require(ok,reason):
  if not ok:raise ValueError(reason)
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
@@ -9,7 +9,7 @@ paths=list(stage.rglob('*'))
 require(paths and all(not p.is_symlink() and (p.is_file() or p.is_dir()) for p in paths),'unsafe stage')
 files={str(p.relative_to(stage)):sha(p) for p in sorted(paths) if p.is_file()}
 require(files and all(n.startswith('com/mad/maduikit/') for n in files),'non-SDK paths')
-targets={'android':('aar','releaseApiElements-published','releaseRuntimeElements-published'),'iossimulatorarm64':('klib','iosSimulatorArm64ApiElements-published'),'iosarm64':('klib','iosArm64ApiElements-published')}
+targets={'iossimulatorarm64':('klib','iosSimulatorArm64ApiElements-published')}
 require({p.name for p in base.iterdir()}=={f'maduikit-{mod}'+('-'+t if t else '') for mod in ('components','theme') for t in ('',*targets)},'unexpected module inventory')
 leafs={}
 for mod in ('components','theme'):
@@ -29,7 +29,7 @@ for mod in ('components','theme'):
    entry,=[x for x in v['files'] if x['url']==file.name]
    require((entry['sha256'],entry['size'])==(h,file.stat().st_size),'module leaf mismatch')
    if ext=='klib':
-    expect='ios_arm64' if target=='iosarm64' else 'ios_simulator_arm64'
+    expect='ios_simulator_arm64'
     require(v['attributes']['org.jetbrains.kotlin.native.target']==expect,'variant native target')
     with zipfile.ZipFile(file) as z:
      require(z.namelist().count('default/manifest')==1 and z.testzip() is None,'invalid KLIB')
@@ -40,5 +40,5 @@ for mod in ('components','theme'):
     with zipfile.ZipFile(file) as z:
      require(z.namelist().count('classes.jar')==1 and z.testzip() is None,'invalid AAR')
   leafs[leaf]={'sha256':h,'size':file.stat().st_size}
-require(len({v['sha256'] for v in leafs.values()})==6,'aliased leaves')
-print(json.dumps(dict(version=ver,leafs=leafs,files=files),indent=2,sort_keys=True))
+require(len({v['sha256'] for v in leafs.values()})==2,'aliased leaves')
+print(json.dumps(dict(scope='ephemeral-local-ios-simulator-only-not-distributable',version=ver,leafs=leafs,files=files),indent=2,sort_keys=True))

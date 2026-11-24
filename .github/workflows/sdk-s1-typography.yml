@@ -1,17 +1,17 @@
-name: Synthetic S1 iOS runtime without binary export
+name: Synthetic alpha07 iOS controls without binary export
 on:
   push:
-    branches: [ci/sdk-s1-ui-ios-local-runtime-module]
+    branches: [ci/sdk-alpha07-ios-controls]
     paths:
       - '.github/workflows/sdk-s1-typography.yml'
       - 'ci/sdk-s1-typography/**'
 permissions: {contents: read}
 concurrency:
-  group: sdk-s1-ui-ios-local-runtime-path
+  group: sdk-alpha07-ios-controls
   cancel-in-progress: false
 jobs:
   build-and-run-without-export:
-    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-s1-ui-ios-local-runtime-module'
+    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-alpha07-ios-controls'
     runs-on: macos-26
     timeout-minutes: 65
     steps:
@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: changyue1053/MadUIKit
-          ref: 19c8c1b1fbe75b7d6a6118fdab42048948de091b
+          ref: 159577f284050ab2b50d61bb859ee379b8e16ab6
           path: ci-input/sdk
           persist-credentials: false
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
@@ -38,7 +38,6 @@ jobs:
             ${{ runner.temp }}/mad-s1-evidence/java.txt
             ${{ runner.temp }}/mad-s1-evidence/xcode.txt
             ${{ runner.temp }}/mad-s1-evidence/checkpoints.tsv
-            ${{ runner.temp }}/mad-s1-evidence/overlay.sha256
             ${{ runner.temp }}/mad-s1-evidence/publisher-configured
             ${{ runner.temp }}/mad-s1-evidence/stage-before.json
             ${{ runner.temp }}/mad-s1-evidence/stage-after-ui.json
@@ -67,7 +66,7 @@ jobs:
             ${{ runner.temp }}/mad-s1-runtime-receipt/guest-selected.json
             ${{ runner.temp }}/mad-s1-runtime-receipt/guest-booted.json
             ${{ runner.temp }}/mad-s1-runtime-receipt/runtime.json
-            ${{ runner.temp }}/mad-s1-runtime-receipt/S1-typography-before.png
-            ${{ runner.temp }}/mad-s1-runtime-receipt/S1-typography-after.png
+            ${{ runner.temp }}/mad-s1-runtime-receipt/S1-alpha07-controls-before.png
+            ${{ runner.temp }}/mad-s1-runtime-receipt/S1-alpha07-controls-after.png
           if-no-files-found: warn
           retention-days: 7

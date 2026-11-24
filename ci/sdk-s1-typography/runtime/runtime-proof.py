@@ -13,7 +13,8 @@ def walk(x):
         for v in x: yield from walk(v)
 manifest=list(walk(json.loads((attachments/"manifest.json").read_text())))
 hashes={}
-for name in ("S1-typography-before","S1-typography-after"):
+originals={}
+for name in ("S1-alpha07-controls-before","S1-alpha07-controls-after"):
     selected=[e for e in manifest if re.fullmatch(re.escape(name)+r"(?:_[A-Za-z0-9_-]+)?\.png",e.get("suggestedHumanReadableName",""))]
     if len(selected)!=1: raise SystemExit("Missing or ambiguous exact original screenshot")
     filename=selected[0]["exportedFileName"]
@@ -22,8 +23,10 @@ for name in ("S1-typography-before","S1-typography-after"):
     if p.is_symlink() or p.resolve()!=p or not p.is_file() or not 8<p.stat().st_size<=12_000_000: raise SystemExit("Invalid screenshot file")
     data=p.read_bytes()
     if not data.startswith(b"\x89PNG\r\n\x1a\n"): raise SystemExit("No original PNG")
-    (output/(name+".png")).write_bytes(data)
+    originals[name]=data
     hashes[name]=hashlib.sha256(data).hexdigest()
 if len(set(hashes.values()))!=2: raise SystemExit("Screenshots did not change")
-receipt=dict(runtime="passed",scope="synthetic iOS simulator only; not S1 complete",selector="two distinct exact leaf identifiers with Books label",nativeInteraction="one tap; Selections 0 to 1",screenshots=hashes,framework=json.loads(transfer.read_text()))
+for name, data in originals.items():
+    (output/(name+".png")).write_bytes(data)
+receipt=dict(runtime="passed",scope="synthetic iOS simulator only; not S1 complete",selector="unique tagged elements, exact control and status labels, native taps",nativeInteraction="checkbox decline then accept; switch on/off/on; icon count 0 to 2; three disabled physical taps with no callback",screenshots=hashes,framework=json.loads(transfer.read_text()))
 (output/"runtime.json").write_text(json.dumps(receipt,sort_keys=True,indent=2)+"\n")
