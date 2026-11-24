@@ -5,7 +5,11 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
+import com.mad.maduikit.MadActionButton
+import com.mad.maduikit.MadBorderRole
+import com.mad.maduikit.MadButtonVariant
 import com.mad.maduikit.MadCheckbox
+import com.mad.maduikit.MadDivider
 import com.mad.maduikit.MadIcon
 import com.mad.maduikit.MadIconButton
 import com.mad.maduikit.MadRadio
@@ -43,5 +47,35 @@ fun ControlsProbe(
             enabled = enabled)
         MadIcon(painter = painter, contentDescription = "Library status")
         MadIconButton(painter = painter, label = "Refresh library", enabled = enabled, onClick = onRefresh)
+    }
+}
+
+/** Callers retain control of in-flight state, localization and policy. */
+@Composable
+fun ActionPanelProbe(
+    isSaving: Boolean,
+    destructiveActionAllowed: Boolean,
+    onSave: () -> Unit,
+    onPreview: () -> Unit,
+    onCancel: () -> Unit,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier) {
+        MadActionButton(
+            label = "Save changes",
+            variant = MadButtonVariant.Primary,
+            loadingStatus = if (isSaving) "Saving changes" else null,
+            onClick = onSave,
+        )
+        MadActionButton(label = "Preview", variant = MadButtonVariant.Secondary, onClick = onPreview)
+        MadActionButton(label = "Cancel", variant = MadButtonVariant.Text, onClick = onCancel)
+        MadDivider(role = MadBorderRole.Strong)
+        MadActionButton(
+            label = "Delete draft",
+            variant = MadButtonVariant.Danger,
+            enabled = destructiveActionAllowed && !isSaving,
+            onClick = onDelete,
+        )
     }
 }

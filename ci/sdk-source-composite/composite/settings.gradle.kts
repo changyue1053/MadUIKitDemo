@@ -6,7 +6,7 @@ dependencyResolutionManagement {
 // Scope: disposable developer fixture only, not a published-Maven verification.
 val sdkCheckout = providers.gradleProperty("madSdkSource").get()
 includeBuild(sdkCheckout) {
-    name = "madUIKitExactAlpha08"
+    name = "madUIKitExactAlpha10"
     dependencySubstitution {
         substitute(module("com.mad.maduikit:maduikit-components")).using(project(":maduikit-components"))
         substitute(module("com.mad.maduikit:maduikit-theme")).using(project(":maduikit-theme"))
