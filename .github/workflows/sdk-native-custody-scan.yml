@@ -1,20 +1,20 @@
 name: SDK-only alpha03 local custody scan (no binaries)
 on:
   push:
-    branches: [ci/sdk-native-custody-scan]
+    branches: [ci/sdk-native-custody-typed-class]
     paths:
       - '.github/workflows/sdk-native-custody-scan.yml'
       - 'ci/sdk-native-custody-scan/**'
 permissions: {contents: read}
 concurrency:
-  group: sdk-native-custody-scan
+  group: sdk-native-custody-typed-class
   cancel-in-progress: false
 jobs:
   scan:
     if: >-
       github.repository == 'changyue1053/MadUIKitDemo' &&
-      github.ref == 'refs/heads/ci/sdk-native-custody-scan' &&
-      contains(github.event.head_commit.message, 'MADSDK_CUSTODY_SCAN_REVIEWED: cec44952263f528bb3775f0af63af51b4a04b621')
+      github.ref == 'refs/heads/ci/sdk-native-custody-typed-class' &&
+      contains(github.event.head_commit.message, 'MADSDK_CUSTODY_TYPED_CLASS_REVIEWED: cec44952263f528bb3775f0af63af51b4a04b621')
     runs-on: macos-15-intel
     timeout-minutes: 26
     steps:

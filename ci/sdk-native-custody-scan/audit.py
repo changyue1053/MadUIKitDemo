@@ -20,6 +20,7 @@ TOP_SIZE=25*1024*1024
 ENTRY_SIZE=8*1024*1024
 TOTAL=96*1024*1024
 MAX_RATIO=1024
+MAD_TEXT_ENUM_CLASS="com/mad/maduikit/MadTextKt$WhenMappings.class"
 IR=set("bodies.knb debugInfo.knd fileEntries.knf files.knf irDeclarations.knd irInlineDeclarations.knd signatures.knt strings.knt types.knt".split())
 BASE={"theme": {"MadTheme"}, "components": {"MadButton","MadFilterTabs"}}
 S1={"theme": {"MadSpacing","MadTypography","MadProvideTypography"}, "components": {"MadText"}}
@@ -141,7 +142,10 @@ class Scanner:
 
     def archive(self,b,role,family,module):
         if len(b)>TOP_SIZE: raise Reject("archive-size-cap")
-        with strict_zip(b,150) as z:
+        # Only an alpha03 Android components AAR's own nested classes.jar may
+        # contain this exact Kotlin-generated enum dispatch class name.
+        scoped_class=role=="classes" and family=="components" and module=="maduikit-components-android" and self.mode in {"alpha03-exact","alpha03-job-local"}
+        with strict_zip(b,150,allow_mad_text_enum_class=scoped_class) as z:
             i=z.infolist()
             if role!="resources" and not i: raise Reject("empty-unexpected-container")
             self.counts["container-"+role]+=1
@@ -168,7 +172,7 @@ class Scanner:
                 self.mark(pay,redacted_role,Path(n).suffix in TEXT_EXT or n.endswith("/manifest"))
 
 
-def strict_zip(b, cap):
+def strict_zip(b, cap, *, allow_mad_text_enum_class=False):
     if len(b)<22 or b[-22:-18]!=b"PK\x05\x06": raise Reject("archive-cap-or-envelope")
     _,disk,disk_cd,disc_count,count,cd_bytes,cd_start,comment=struct.unpack_from("<4s4H2IH",b,len(b)-22)
     if disk or disk_cd or disc_count!=count or comment or cd_start+cd_bytes!=len(b)-22:
@@ -181,7 +185,8 @@ def strict_zip(b, cap):
         at=0
         for x in sorted(entries,key=lambda k:k.header_offset):
             kind=stat.S_IFMT(x.external_attr>>16)
-            if (not valid_name(x.filename) or x.comment or x.extra or x.flag_bits & ~0x800 or
+            scoped_name=allow_mad_text_enum_class and x.filename==MAD_TEXT_ENUM_CLASS and not x.is_dir()
+            if ((not valid_name(x.filename) and not scoped_name) or x.comment or x.extra or x.flag_bits & ~0x800 or
                 kind not in (0,stat.S_IFREG,stat.S_IFDIR) or x.compress_type not in (0,8)):
                 raise Reject("unsafe-member-metadata")
             if at!=x.header_offset or at+30>cd_start: raise Reject("unexpected-zip-gap-or-local-header")

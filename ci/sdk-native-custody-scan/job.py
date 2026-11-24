@@ -11,6 +11,22 @@ import audit
 
 PIN="cec44952263f528bb3775f0af63af51b4a04b621"
 VER="0.1.0-alpha03-sdk-preview01"
+# Literal declassification policy for reasons already emitted by the scanner.
+# Do not use prefixes, exception repr, or input-dependent strings.
+REFUSALS=frozenset({
+    "archive-cap-or-envelope", "archive-count-or-duplicate", "archive-size-cap",
+    "digest-sidecar-content-mismatch", "empty-unexpected-container", "expected-text-not-utf8",
+    "global-expanded-byte-cap", "inconsistent-zip-local-header", "invalid-class-magic",
+    "invalid-digest-sidecar", "job-local-stage-must-be-directory", "member-size-ratio-cap",
+    "noncanonical-zip-envelope", "nonempty-directory-entry", "pinned-stage-receipt-identity",
+    "public-source-hash-mismatch", "stage-entry-size-cap", "stage-file-inventory-mismatch",
+    "stage-file-sha-mismatch", "stage-size-cap", "unclassified-validator-error",
+    "unexpected-embedded-binary", "unexpected-stage-receipt", "unexpected-zip-gap-or-local-header",
+    "unknown-member-role-aar", "unknown-member-role-classes", "unknown-member-role-empty-metadata",
+    "unknown-member-role-klib", "unknown-member-role-resources", "unknown-member-role-root-metadata",
+    "unknown-member-role-sources", "unknown-module", "unknown-stage-file-format",
+    "unsafe-member-metadata", "unsafe-stage-file", "unsafe-stage-layout",
+})
 
 
 def digest(p):
@@ -26,7 +42,7 @@ def observe(command, stage, filename):
 def drive(work, verify, observe_stage=observe, scanner=audit.validate):
     r={"mavenValidation":"not-run","scan":"not-run","stageEquality":"not-run",
        "transport":"not-authorized-no-capsule","stageManifestSha256":None,
-       "findingCounts":{}}
+       "findingCounts":{},"refusalCodes":[]}
     stage=work/"stage"
     if not stage.is_dir() or stage.is_symlink(): return r|{"mavenValidation":"stage-unavailable"}
     original=work/"manifest-before.json"
@@ -48,8 +64,12 @@ def drive(work, verify, observe_stage=observe, scanner=audit.validate):
         for k,v in findings.items():
             if ":" in k and k.split(":",1)[0] in allowed and k.split(":",1)[1] in reasons and type(v) is int and 0<v<=1000:
                 r["findingCounts"][k]=v
+            elif k in REFUSALS and type(v) is int and 0<v<=1000:
+                r["refusalCodes"].append(k)
+                r["findingCounts"]["structural-or-unknown-refusal"]=1
             else:
                 r["findingCounts"]["structural-or-unknown-refusal"]=1
+        r["refusalCodes"].sort()
         if (result["status"] not in {"blocked","scanner-eligible-not-authorized"} or
                 (findings and result["status"]!="blocked")):
             r["scan"]="blocked-unclassified"

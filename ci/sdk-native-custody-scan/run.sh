@@ -3,9 +3,9 @@ set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd -P)"
 existing="$here/../sdk-native-preview-proof"
 pin=cec44952263f528bb3775f0af63af51b4a04b621
-base=79922a2158103a54589d5302cc47b83d2096a85d
+base=d40410b6374f16bd8242deb717736119db62b6bd
 version=0.1.0-alpha03-sdk-preview01
-test "${GITHUB_REF:-}" = refs/heads/ci/sdk-native-custody-scan
+test "${GITHUB_REF:-}" = refs/heads/ci/sdk-native-custody-typed-class
 [[ "${GITHUB_SHA:-}" =~ ^[0-9a-f]{40}$ && "${GITHUB_RUN_ID:-}" =~ ^[0-9]{1,20}$ && "${GITHUB_RUN_ATTEMPT:-}" =~ ^[0-9]{1,20}$ ]]
 temp="$(cd "${RUNNER_TEMP:?}" && pwd -P)"
 out="$temp/mad-custody-receipt"
@@ -25,7 +25,7 @@ p=Path(path)
 doc=json.loads(p.read_text()) if p.is_file() else dict(
     run=os.environ["GITHUB_RUN_ID"],attempt=os.environ["GITHUB_RUN_ATTEMPT"],demoCommit=os.environ["GITHUB_SHA"],
     sdkCommit=pin,version=version,mavenValidation="not-run",scan="not-run",stageEquality="not-run",
-    findingCounts={},stageManifestSha256=None,transport="not-authorized-no-capsule",
+    findingCounts={},refusalCodes=[],stageManifestSha256=None,transport="not-authorized-no-capsule",
     scope="fresh same-run stage scan, not original stage identity, no binary or capsule export")
 doc.update(exit=int(code),gate=gate,scratchCleanup=cleaned)
 if cleaned!="deleted": doc["scan"]="blocked-cleanup-failed"
@@ -38,7 +38,7 @@ trap finish EXIT
 exec > "$work/local.log" 2>&1
 test "$(git rev-parse HEAD^)" = "$base"
 test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-git diff --exit-code "$base" HEAD -- . ':!.github/workflows/sdk-native-custody-scan.yml' ':!ci/sdk-native-custody-scan/'
+git diff --exit-code "$base" HEAD -- . ':!.github/workflows/sdk-native-custody-scan.yml' ':!ci/sdk-native-custody-scan/run.sh' ':!ci/sdk-native-custody-scan/job.py' ':!ci/sdk-native-custody-scan/audit.py'
 test "$(git -C ci-input/sdk rev-parse HEAD)" = "$pin"
 git -C ci-input/sdk diff --quiet HEAD --
 gate=host-prerequisites
