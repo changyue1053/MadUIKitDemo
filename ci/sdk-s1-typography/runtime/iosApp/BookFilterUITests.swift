@@ -1,64 +1,50 @@
 import XCTest
-import UIKit
-import CoreGraphics
 
 final class BookFilterUITests: XCTestCase {
-    func testAlpha09FoundationGallery() {
+    func testAlpha10ActionGallery() {
         continueAfterFailure = false
         let app = XCUIApplication(bundleIdentifier: "dev.mad.synthetic.typography.ios")
         app.launch()
-        unique(app, "gallery-title", label: "Foundation gallery · alpha09")
-        let light = unique(app, "gallery-light", label: "Light")
-        let dark = unique(app, "gallery-dark", label: "Dark")
-        let brand = unique(app, "gallery-brand", label: "Brand")
-        let restored = unique(app, "gallery-restored", label: "Restored")
-        tryColor(light, expected: [49, 83, 166])
-        tryColor(dark, expected: [186, 200, 255])
-        tryColor(brand, expected: [0, 107, 86])
-        tryColor(restored, expected: [49, 83, 166])
-        unique(app, "gallery-geometry", label: "Dividers: 3/9 px @ 3.0x / bounded")
-        unique(app, "gallery-mode", label: "Mode: Online / 0")
-        let before = XCUIScreen.main.screenshot().pngRepresentation
-        let offline = unique(app, "gallery-offline", label: "Offline")
-        XCTAssertTrue(offline.isHittable)
-        offline.tap()
-        unique(app, "gallery-mode", label: "Mode: Offline / 1")
-        offline.tap()
-        let online = unique(app, "gallery-online", label: "Online")
-        XCTAssertTrue(online.isHittable)
-        online.tap()
-        unique(app, "gallery-mode", label: "Mode: Online / 2")
-        offline.tap()
-        unique(app, "gallery-mode", label: "Mode: Offline / 3")
-        retainScreen("S1-alpha09-gallery-before", before)
-        retainScreen("S1-alpha09-gallery-after", XCUIScreen.main.screenshot().pngRepresentation)
+        unique(app, "actions-title", label: "Action buttons · alpha10")
+        state(app, phase: "Ready", starts: 0, completions: 0)
+        let ready = XCUIScreen.main.screenshot().pngRepresentation
+        // Complete is disabled before starting. The danger button is always disabled.
+        physicalTap(app, "complete-action", label: "Complete operation")
+        physicalTap(app, "disabled-action", label: "Delete operation")
+        liveTap(app, "start-action", label: "Start operation")
+        state(app, phase: "In progress", starts: 1, completions: 0)
+        physicalTap(app, "start-action", label: "Start operation")
+        physicalTap(app, "start-action", label: "Start operation")
+        physicalTap(app, "disabled-action", label: "Delete operation")
+        state(app, phase: "In progress", starts: 1, completions: 0)
+        let loading = XCUIScreen.main.screenshot().pngRepresentation
+        // Resume with positive controls. Monotonic counters rule out late or
+        // transient callbacks from earlier disabled/while-loading taps.
+        liveTap(app, "complete-action", label: "Complete operation")
+        state(app, phase: "Ready", starts: 1, completions: 1)
+        liveTap(app, "start-action", label: "Start operation")
+        state(app, phase: "In progress", starts: 2, completions: 1)
+        liveTap(app, "complete-action", label: "Complete operation")
+        state(app, phase: "Ready", starts: 2, completions: 2)
+        retainScreen("S1-alpha10-actions-ready", ready)
+        retainScreen("S1-alpha10-actions-loading", loading)
     }
 
-    // Use rendered UIButton-region pixels, not colors reported by the same Kotlin fixture.
-    // Interior patches avoid the rounded corner, border, and centered text.
-    private func tryColor(_ button: XCUIElement, expected: [Int]) {
-        guard let source = button.screenshot().image.cgImage, source.width >= 240,
-              source.height >= 72, let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) else {
-            return XCTFail("No rendered color image")
-        }
-        for fraction in [0.20, 0.80] {
-            let x = Int(Double(source.width) * fraction)
-            let y = source.height / 2
-            guard let crop = source.cropping(to: CGRect(x: CGFloat(x), y: CGFloat(y), width: 1, height: 1)),
-                  let context = CGContext(data: nil, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
-                    space: colorSpace, bitmapInfo: CGBitmapInfo.byteOrder32Big.rawValue |
-                        CGImageAlphaInfo.premultipliedLast.rawValue) else {
-                return XCTFail("No sRGB color sample")
-            }
-            context.draw(crop, in: CGRect(x: 0, y: 0, width: 1, height: 1))
-            guard let data = context.data?.assumingMemoryBound(to: UInt8.self) else {
-                return XCTFail("No decoded sRGB color sample")
-            }
-            XCTAssertEqual(data[3], 255)
-            for channel in 0..<3 {
-                XCTAssertLessThanOrEqual(abs(Int(data[channel]) - expected[channel]), 4)
-            }
-        }
+    private func state(_ app: XCUIApplication, phase: String, starts: Int, completions: Int) {
+        unique(app, "actions-phase", label: "State: \(phase)")
+        unique(app, "actions-counters", label: "Starts: \(starts) / Completions: \(completions) / Disabled: 0")
+    }
+
+    private func physicalTap(_ app: XCUIApplication, _ tag: String, label: String) {
+        let frame = unique(app, tag, label: label).frame
+        let origin = app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
+        origin.withOffset(CGVector(dx: frame.midX - app.frame.minX, dy: frame.midY - app.frame.minY)).tap()
+    }
+
+    private func liveTap(_ app: XCUIApplication, _ tag: String, label: String) {
+        let node = unique(app, tag, label: label)
+        XCTAssertTrue(node.isHittable)
+        node.tap()
     }
 
     @discardableResult
@@ -66,14 +52,14 @@ final class BookFilterUITests: XCTestCase {
         let query = app.descendants(matching: .any).matching(NSPredicate(format: "identifier == %@", tag))
         XCTAssertTrue(query.firstMatch.waitForExistence(timeout: 30))
         XCTAssertEqual(query.count, 1)
-        let element = query.element(boundBy: 0)
-        XCTAssertEqual(element.identifier, tag)
-        let matches = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", label), object: element)
-        XCTAssertEqual(XCTWaiter.wait(for: [matches], timeout: 15), .completed)
-        let frame = element.frame
+        let node = query.element(boundBy: 0)
+        XCTAssertEqual(node.identifier, tag)
+        let expected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", label), object: node)
+        XCTAssertEqual(XCTWaiter.wait(for: [expected], timeout: 15), .completed)
+        let frame = node.frame
         XCTAssertTrue(frame.origin.x.isFinite && frame.origin.y.isFinite && frame.width.isFinite && frame.height.isFinite)
         XCTAssertTrue(!frame.isEmpty && app.frame.contains(frame))
-        return element
+        return node
     }
 
     private func retainScreen(_ name: String, _ bytes: Data) {

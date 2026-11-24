@@ -14,7 +14,7 @@ def walk(x):
 manifest=list(walk(json.loads((attachments/"manifest.json").read_text())))
 hashes={}
 originals={}
-for name in ("S1-alpha09-gallery-before","S1-alpha09-gallery-after"):
+for name in ("S1-alpha10-actions-ready","S1-alpha10-actions-loading"):
     selected=[e for e in manifest if re.fullmatch(re.escape(name)+r"(?:_[A-Za-z0-9_-]+)?\.png",e.get("suggestedHumanReadableName",""))]
     if len(selected)!=1: raise SystemExit("Missing or ambiguous exact original screenshot")
     filename=selected[0]["exportedFileName"]
@@ -28,5 +28,5 @@ for name in ("S1-alpha09-gallery-before","S1-alpha09-gallery-after"):
 if len(set(hashes.values()))!=2: raise SystemExit("Screenshots did not change")
 for name, data in originals.items():
     (output/(name+".png")).write_bytes(data)
-receipt=dict(foundation=dict(palette="light/dark/brand/restored light; rendered sRGB", divider="default 1dp and explicit 3dp; measured 3/9px at density 3"),runtime="passed",scope="synthetic iOS simulator only; not S1 complete",selector="unique tagged labels, actual rendered accent colors and measured divider height",nativeInteraction="radio Online to Offline to Online to Offline with selected re-tap no-op",screenshots=hashes,framework=json.loads(transfer.read_text()))
+receipt=dict(actions=dict(acceptedStarts=2,acceptedCompletions=2,disabledCallbacks=0,blockedPhysicalTaps=5),runtime="passed",scope="synthetic iOS simulator only; not S1 complete",selector="unique tagged labels, physical loading/disabled taps and exact monotonic counts",nativeInteraction="ready to loading to ready twice; no refresh starts or disabled callbacks while blocked",screenshots=hashes,framework=json.loads(transfer.read_text()))
 (output/"runtime.json").write_text(json.dumps(receipt,sort_keys=True,indent=2)+"\n")

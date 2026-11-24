@@ -7,7 +7,7 @@ mkdir "$out"
 gate=preflight
 work="$(mktemp -d "$RUNNER_TEMP/mad-s1.XXXXXX")"
 work="$(cd "$work" && pwd -P)"
-trap 'rc=$?; printf "gate=%s\nexit=%s\nscope=synthetic iOS simulator alpha09 palette, divider geometry and radio group; no Android/Harmony execution, device, or packaging\n" "$gate" "$rc" > "$out/result.txt"; exit "$rc"' EXIT
+trap 'rc=$?; printf "gate=%s\nexit=%s\nscope=synthetic iOS simulator alpha10 host-owned action loading and disabled no-op; no Android/Harmony execution, device, or packaging\n" "$gate" "$rc" > "$out/result.txt"; exit "$rc"' EXIT
 runlog(){
   gate="$1"; local bound="$2"; shift 2
   printf 'Checkpoint: %s (%s s)\n' "$gate" "$bound"
@@ -21,10 +21,10 @@ runlog(){
   printf '%s\t%s\t%s\n' "$gate" "$rc" "$detail" >> "$out/checkpoints.tsv"
   return "$rc"
 }
-base=879be5a93cc8a7088cb4c8da470f43219d4791a4
-branch=refs/heads/ci/sdk-alpha09-ios-gallery
+base=1a814b05d5d1262e5023779cc137d1e2aee3d391
+branch=refs/heads/ci/sdk-alpha10-ios-actions
 test "${GITHUB_REF:?}" = "$branch"
-pin=3ca8365c86be96594a4a8cbe83eb81ecb4efbf5a
+pin=532903a137952b81fa6ee773eff87c6cb39f5b86
 test "$(git rev-parse HEAD)" = "${GITHUB_SHA:?}"
 test "$(git rev-parse HEAD^)" = "$base"
 changed="$(git diff --name-only "$base" HEAD | LC_ALL=C sort)"
@@ -36,8 +36,8 @@ ci/sdk-s1-typography/runtime/run-host.sh
 ci/sdk-s1-typography/runtime/runtime-proof.py
 ci/sdk-s1-typography/runtime/same-job-framework.py
 ci/sdk-s1-typography/ui-adopter/composeApp/build.gradle.kts
+ci/sdk-s1-typography/ui-adopter/composeApp/src/iosMain/kotlin/ActionGallery.kt
 ci/sdk-s1-typography/ui-adopter/composeApp/src/iosMain/kotlin/FixtureViewController.kt
-ci/sdk-s1-typography/ui-adopter/composeApp/src/iosMain/kotlin/FoundationGallery.kt
 ci/sdk-s1-typography/verify-stage.py
 FILES
 )"
@@ -110,7 +110,7 @@ cd "$adopter"
 export GRADLE_USER_HOME="$work/ui-adopter-gradle"
 test ! -e "$GRADLE_USER_HOME"
 options=("-PmadStage=$stage" -PmadApple=true)
-shasum -a 256 composeApp/src/iosMain/kotlin/FoundationGallery.kt > "$out/ui-caller.sha256"
+shasum -a 256 composeApp/src/iosMain/kotlin/ActionGallery.kt > "$out/ui-caller.sha256"
 ios_probe(){
   gate="$1"; local bound="$2"; shift 2
   local rc=0 logfile="$work/$gate.log"
@@ -158,4 +158,4 @@ python3 "$ci/runtime/same-job-framework.py" record "$(dirname "$framework")" "$p
   "$(awk '{print $1}' "$out/ui-caller.sha256")" "$(sha "$out/stage-before.json")"
 gate=same-job-synthetic-native-host
 (cd "$root"; bash "$ci/runtime/run-host.sh" "$(dirname "$framework")" "$proof")
-gate=verified-synthetic-alpha09-ios-foundation-gallery
+gate=verified-synthetic-alpha10-ios-action-loading

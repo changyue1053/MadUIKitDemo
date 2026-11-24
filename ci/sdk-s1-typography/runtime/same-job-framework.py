@@ -111,7 +111,7 @@ def handle():
     directory, proof = map(job_path,sys.argv[2:4])
     fingerprints = inventory(directory)
     fixed=dict(commit=os.environ["GITHUB_SHA"],run=os.environ["GITHUB_RUN_ID"],attempt=os.environ["GITHUB_RUN_ATTEMPT"],
-               sdkCommit="3ca8365c86be96594a4a8cbe83eb81ecb4efbf5a",target="ios_simulator_arm64",syntheticOnly=True,
+               sdkCommit="532903a137952b81fa6ee773eff87c6cb39f5b86",target="ios_simulator_arm64",syntheticOnly=True,
                frameworkCustody="same-job-temp-never-exported")
     require(re.fullmatch(r"[0-9a-f]{40}",fixed["commit"]) and fixed["run"].isdecimal() and fixed["attempt"].isdecimal(),"Invalid job binding")
     keys=("binarySha256","graphSha256","callerSha256","stageSha256")
