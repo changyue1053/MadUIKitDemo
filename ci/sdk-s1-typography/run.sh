@@ -21,8 +21,8 @@ runlog(){
   printf '%s\t%s\t%s\n' "$gate" "$rc" "$detail" >> "$out/checkpoints.tsv"
   return "$rc"
 }
-base=9add2265e06c8a2389a40cf9e4556fda1ca816a1
-branch=refs/heads/ci/sdk-s1-ui-ios-local-runtime
+base=db558c9898a129879795c5ce68326b4c67194c3a
+branch=refs/heads/ci/sdk-s1-ui-ios-local-runtime-path
 test "${GITHUB_REF:?}" = "$branch"
 pin=19c8c1b1fbe75b7d6a6118fdab42048948de091b
 test "$(git rev-parse HEAD^)" = "$base"
@@ -30,8 +30,6 @@ changed="$(git diff --name-only "$base" HEAD | LC_ALL=C sort)"
 expected="$(cat <<'FILES'
 .github/workflows/sdk-s1-typography.yml
 ci/sdk-s1-typography/run.sh
-ci/sdk-s1-typography/runtime/run-host.sh
-ci/sdk-s1-typography/runtime/same-job-framework.py
 FILES
 )"
 test "$changed" = "$expected"
@@ -138,13 +136,14 @@ if type(v) is not int or not 3758096384 <= v <= 4563402752:
     raise SystemExit("Missing or out-of-bounds in-task heap receipt")
 PYHEAP
 gate=ui-ios-framework-validation
-framework=composeApp/build/bin/iosSimulatorArm64/debugFramework/MadUIKitS1Adopter.framework/MadUIKitS1Adopter
+framework_rel=composeApp/build/bin/iosSimulatorArm64/debugFramework/MadUIKitS1Adopter.framework/MadUIKitS1Adopter
+framework="$adopter/$framework_rel"
 test -s "$framework"
 xcrun lipo -archs "$framework" | grep -Fx arm64
 xcrun otool -l "$framework" | awk '/cmd LC_BUILD_VERSION/ { active=1; next } active && $1=="platform" {print $2; active=0}' | sort -u > "$out/ui-ios-platform.txt"
 grep -Ex 'IOSSIMULATOR|7' "$out/ui-ios-platform.txt"
 test "$(wc -l < "$out/ui-ios-platform.txt" | tr -d ' ')" = 1
-shasum -a 256 "$framework" > "$out/ui-ios-framework.sha256"
+shasum -a 256 "$framework_rel" > "$out/ui-ios-framework.sha256"
 gate=stage-immutable-after-ui-adopter
 python3 "$ci/verify-stage.py" "$stage" > "$out/stage-after-ui.json"
 cmp "$out/stage-before.json" "$out/stage-after-ui.json"
