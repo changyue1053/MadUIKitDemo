@@ -1,0 +1,232 @@
+// !$*UTF8*$!
+{
+    archiveVersion = 1;
+    classes = {};
+    objectVersion = 56;
+    objects = {
+        475247180000000000000001 = {
+            isa = PBXProject;
+            attributes = {
+                LastSwiftUpdateCheck = 2600;
+                LastUpgradeCheck = 2600;
+                TargetAttributes = {
+                    475247180000000000000006 = {CreatedOnToolsVersion = 26.0; };
+                    475247180000000000000021 = {CreatedOnToolsVersion = 26.0; TestTargetID = 475247180000000000000006; };
+                };
+            };
+            buildConfigurationList = 475247180000000000000010;
+            compatibilityVersion = "Xcode 14.0";
+            developmentRegion = en;
+            hasScannedForEncodings = 0;
+            knownRegions = (en, Base);
+            mainGroup = 475247180000000000000002;
+            productRefGroup = 475247180000000000000003;
+            projectDirPath = "";
+            projectRoot = "";
+            targets = (475247180000000000000006, 475247180000000000000021);
+        };
+        475247180000000000000002 = {
+            isa = PBXGroup;
+            children = (475247180000000000000004, 475247180000000000000016, 475247180000000000000023, 475247180000000000000003);
+            sourceTree = "<group>";
+        };
+        475247180000000000000003 = {
+            isa = PBXGroup;
+            children = (475247180000000000000005, 475247180000000000000022);
+            name = Products;
+            sourceTree = "<group>";
+        };
+        475247180000000000000004 = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = DemoApp.swift;
+            sourceTree = "<group>";
+        };
+        475247180000000000000005 = {
+            isa = PBXFileReference;
+            explicitFileType = wrapper.application;
+            includeInIndex = 0;
+            path = MadUIKitDemo.app;
+            sourceTree = BUILT_PRODUCTS_DIR;
+        };
+        475247180000000000000006 = {
+            isa = PBXNativeTarget;
+            buildConfigurationList = 475247180000000000000011;
+            buildPhases = (475247180000000000000007, 475247180000000000000008, 475247180000000000000009, 47524718000000000000000A);
+            buildRules = ();
+            dependencies = ();
+            name = MadUIKitDemo;
+            productName = MadUIKitDemo;
+            productReference = 475247180000000000000005;
+            productType = "com.apple.product-type.application";
+        };
+        475247180000000000000007 = {
+            isa = PBXShellScriptBuildPhase;
+            alwaysOutOfDate = 1;
+            buildActionMask = 2147483647;
+            files = ();
+            inputPaths = ();
+            name = "Build Compose Framework";
+            outputPaths = ();
+            runOnlyForDeploymentPostprocessing = 0;
+            shellPath = /bin/sh;
+            shellScript = "exec /bin/sh \"$SRCROOT/../scripts/ios-framework.sh\"\n";
+        };
+        475247180000000000000008 = {
+            isa = PBXSourcesBuildPhase;
+            buildActionMask = 2147483647;
+            files = (47524718000000000000000B);
+            runOnlyForDeploymentPostprocessing = 0;
+        };
+        475247180000000000000009 = {
+            isa = PBXFrameworksBuildPhase;
+            buildActionMask = 2147483647;
+            files = ();
+            runOnlyForDeploymentPostprocessing = 0;
+        };
+        47524718000000000000000A = {
+            isa = PBXResourcesBuildPhase;
+            buildActionMask = 2147483647;
+            files = ();
+            runOnlyForDeploymentPostprocessing = 0;
+        };
+        47524718000000000000000B = {
+            isa = PBXBuildFile;
+            fileRef = 475247180000000000000004;
+        };
+        475247180000000000000010 = {
+            isa = XCConfigurationList;
+            buildConfigurations = (475247180000000000000012, 475247180000000000000013);
+            defaultConfigurationIsVisible = 0;
+            defaultConfigurationName = Release;
+        };
+        475247180000000000000011 = {
+            isa = XCConfigurationList;
+            buildConfigurations = (475247180000000000000014, 475247180000000000000015);
+            defaultConfigurationIsVisible = 0;
+            defaultConfigurationName = Release;
+        };
+        475247180000000000000012 = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                ENABLE_USER_SCRIPT_SANDBOXING = NO;
+                IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+                SDKROOT = iphoneos;
+                SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+            };
+            name = Debug;
+        };
+        475247180000000000000013 = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                ENABLE_USER_SCRIPT_SANDBOXING = NO;
+                IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+                SDKROOT = iphoneos;
+            };
+            name = Release;
+        };
+        475247180000000000000014 = {
+            isa = XCBuildConfiguration;
+            baseConfigurationReference = 475247180000000000000016;
+            buildSettings = {};
+            name = Debug;
+        };
+        475247180000000000000015 = {
+            isa = XCBuildConfiguration;
+            baseConfigurationReference = 475247180000000000000016;
+            buildSettings = {};
+            name = Release;
+        };
+        475247180000000000000016 = {
+            isa = PBXFileReference;
+            lastKnownFileType = text.xcconfig;
+            path = Demo.xcconfig;
+            sourceTree = "<group>";
+        };
+        475247180000000000000021 = {
+            isa = PBXNativeTarget;
+            buildConfigurationList = 475247180000000000000027;
+            buildPhases = (475247180000000000000025, 475247180000000000000026);
+            buildRules = ();
+            dependencies = (47524718000000000000002A);
+            name = MadUIKitDemoUITests;
+            productName = MadUIKitDemoUITests;
+            productReference = 475247180000000000000022;
+            productType = "com.apple.product-type.bundle.ui-testing";
+        };
+        475247180000000000000022 = {
+            isa = PBXFileReference;
+            explicitFileType = wrapper.cfbundle;
+            includeInIndex = 0;
+            path = MadUIKitDemoUITests.xctest;
+            sourceTree = BUILT_PRODUCTS_DIR;
+        };
+        475247180000000000000023 = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = BookFilterUITests.swift;
+            sourceTree = "<group>";
+        };
+        475247180000000000000024 = {
+            isa = PBXBuildFile;
+            fileRef = 475247180000000000000023;
+        };
+        475247180000000000000025 = {
+            isa = PBXSourcesBuildPhase;
+            buildActionMask = 2147483647;
+            files = (475247180000000000000024);
+            runOnlyForDeploymentPostprocessing = 0;
+        };
+        475247180000000000000026 = {
+            isa = PBXFrameworksBuildPhase;
+            buildActionMask = 2147483647;
+            files = ();
+            runOnlyForDeploymentPostprocessing = 0;
+        };
+        475247180000000000000027 = {
+            isa = XCConfigurationList;
+            buildConfigurations = (475247180000000000000028, 475247180000000000000029);
+            defaultConfigurationIsVisible = 0;
+            defaultConfigurationName = Release;
+        };
+        475247180000000000000028 = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                GENERATE_INFOPLIST_FILE = YES;
+                PRODUCT_BUNDLE_IDENTIFIER = dev.mad.synthetic.typography.ios.uitests;
+                PRODUCT_NAME = "$(TARGET_NAME)";
+                SWIFT_VERSION = 5.0;
+                TARGETED_DEVICE_FAMILY = "1,2";
+                SUPPORTED_PLATFORMS = iphonesimulator;
+                TEST_TARGET_NAME = MadUIKitDemo;
+            };
+            name = Debug;
+        };
+        475247180000000000000029 = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                GENERATE_INFOPLIST_FILE = YES;
+                PRODUCT_BUNDLE_IDENTIFIER = dev.mad.synthetic.typography.ios.uitests;
+                PRODUCT_NAME = "$(TARGET_NAME)";
+                SWIFT_VERSION = 5.0;
+                TARGETED_DEVICE_FAMILY = "1,2";
+                SUPPORTED_PLATFORMS = iphonesimulator;
+                TEST_TARGET_NAME = MadUIKitDemo;
+            };
+            name = Release;
+        };
+        47524718000000000000002A = {
+            isa = PBXTargetDependency;
+            target = 475247180000000000000006;
+            targetProxy = 47524718000000000000002B;
+        };
+        47524718000000000000002B = {
+            isa = PBXContainerItemProxy;
+            containerPortal = 475247180000000000000001;
+            proxyType = 1;
+            remoteGlobalIDString = 475247180000000000000006;
+            remoteInfo = MadUIKitDemo;
+        };
+    };
+    rootObject = 475247180000000000000001;
+}

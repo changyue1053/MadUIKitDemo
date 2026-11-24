@@ -6,6 +6,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -31,15 +33,15 @@ fun TypographyAdopter(onTapObserved: () -> Unit = {}) {
     // Use exported Compose UI rather than adding a direct Foundation dependency.
     Layout(content = {
         MadProvideTypography(hostTypography) {
-            MadText("Books", role = MadTextRole.Title)
-            MadButton("Select book", onClick = {
+            MadText("Books", modifier = Modifier.testTag("title-scoped"), role = MadTextRole.Title)
+            MadButton("Select book", modifier = Modifier.testTag("select-book"), onClick = {
                 count++
                 onTapObserved()
             })
         }
         // Same text and semantic role, explicitly outside the provider.
-        MadText("Books", role = MadTextRole.Title)
-        MadText("Selections: $count")
+        MadText("Books", modifier = Modifier.testTag("title-outside"), role = MadTextRole.Title)
+        MadText("Selections: $count", modifier = Modifier.testTag("selection-count"))
     }) { measurables, constraints ->
         val gap = hostGap.roundToPx()
         val childConstraints = constraints.copy(minWidth = 0, minHeight = 0)
