@@ -10,6 +10,16 @@ import sys
 NAME = "MadUIKitS1Adopter"
 LIMITS = {NAME: 234_881_024, f"Headers/{NAME}.h": 400_000, "Modules/module.modulemap": 20_000, "Info.plist": 40_000}
 XCODE_DISK_RESERVE = 3 * 1024**3
+# Kotlin/Native v2.2.21 ModuleMapBuilder (blob f0f7b43224cc9345faba0ca627df848c4924a20c)
+# emits quoted module names; ObjCExport supplies exactly the Foundation dependency.
+EXPECTED_MODULE_MAP = (
+    f'framework module "{NAME}" {{\n'
+    f'    umbrella header "{NAME}.h"\n\n'
+    '    export *\n'
+    '    module * { export * }\n\n'
+    '    use Foundation\n'
+    '}\n'
+).encode("ascii")
 HASH = re.compile(r"[0-9a-f]{64}")
 
 def require(condition, message):
@@ -59,7 +69,7 @@ def inventory(directory):
     with files[NAME].open("rb") as f:
         require(f.read(8)==b"!<arch>\n", "Static archive required")
     require(b"fixtureViewController" in files[f"Headers/{NAME}.h"].read_bytes(), "Missing fixture controller export")
-    require(b"framework module "+NAME.encode() in files["Modules/module.modulemap"].read_bytes(), "Wrong module")
+    require(files["Modules/module.modulemap"].read_bytes() == EXPECTED_MODULE_MAP, "Unexpected Kotlin/Native module map")
     require(plistlib.loads(files["Info.plist"].read_bytes()).get("CFBundleExecutable")==NAME, "Wrong plist executable")
     return {k:file_hash(v) for k,v in files.items()}
 

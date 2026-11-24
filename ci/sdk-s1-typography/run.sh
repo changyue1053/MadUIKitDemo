@@ -21,8 +21,8 @@ runlog(){
   printf '%s\t%s\t%s\n' "$gate" "$rc" "$detail" >> "$out/checkpoints.tsv"
   return "$rc"
 }
-base=b2875d218c1aad4363a0eb2d15d12c3cda6ea34f
-branch=refs/heads/ci/sdk-s1-ui-ios-local-runtime-disk
+base=fcbb01b8cd68cf1b4b6d115a98f407ea19162115
+branch=refs/heads/ci/sdk-s1-ui-ios-local-runtime-module
 test "${GITHUB_REF:?}" = "$branch"
 pin=19c8c1b1fbe75b7d6a6118fdab42048948de091b
 test "$(git rev-parse HEAD^)" = "$base"
