@@ -6,7 +6,7 @@ out="${RUNNER_TEMP:?}/mad-s1-evidence"
 mkdir "$out"
 gate=preflight
 work="$(mktemp -d "$RUNNER_TEMP/mad-s1.XXXXXX")"
-trap 'rc=$?; printf "gate=%s\nexit=%s\nscope=synthetic Android and iOS compile only; no runtime or Harmony\n" "$gate" "$rc" > "$out/result.txt"; exit "$rc"' EXIT
+trap 'rc=$?; printf "gate=%s\nexit=%s\nscope=synthetic iOS compile and framework diagnostic only; no Android adopter, runtime or Harmony\n" "$gate" "$rc" > "$out/result.txt"; exit "$rc"' EXIT
 runlog(){
   gate="$1"; local bound="$2"; shift 2
   printf 'Checkpoint: %s (%s s)\n' "$gate" "$bound"
@@ -20,8 +20,8 @@ runlog(){
   printf '%s\t%s\t%s\n' "$gate" "$rc" "$detail" >> "$out/checkpoints.tsv"
   return "$rc"
 }
-base=8de4d05b40e83fdb7678b5d868fbcfaae4726e13
-branch=refs/heads/ci/sdk-s1-ui-adopter-build
+base=d479e156f9f5c75fe15e9022141aa1076db8de81
+branch=refs/heads/ci/sdk-s1-ui-ios-diagnostic
 test "${GITHUB_REF:?}" = "$branch"
 pin=19c8c1b1fbe75b7d6a6118fdab42048948de091b
 test "$(git rev-parse HEAD^)" = "$base"
@@ -29,12 +29,7 @@ changed="$(git diff --name-only "$base" HEAD | LC_ALL=C sort)"
 expected="$(cat <<'FILES'
 .github/workflows/sdk-s1-typography.yml
 ci/sdk-s1-typography/run.sh
-ci/sdk-s1-typography/ui-adopter/composeApp/build.gradle.kts
-ci/sdk-s1-typography/ui-adopter/composeApp/src/androidMain/AndroidManifest.xml
-ci/sdk-s1-typography/ui-adopter/composeApp/src/androidMain/kotlin/FixtureActivity.kt
-ci/sdk-s1-typography/ui-adopter/composeApp/src/commonMain/kotlin/TypographyAdopter.kt
-ci/sdk-s1-typography/ui-adopter/composeApp/src/iosMain/kotlin/FixtureViewController.kt
-ci/sdk-s1-typography/ui-adopter/settings.gradle.kts
+ci/sdk-s1-typography/sanitize-ios.py
 FILES
 )"
 test "$changed" = "$expected"
@@ -98,29 +93,6 @@ done
 runlog publish 720 bash gradlew "${flags[@]}" "-PmaduikitStagingDir=$stage" "${tasks[@]}"
 gate=stage-verify
 python3 "$ci/verify-stage.py" "$stage" > "$out/stage-before.json"
-for entry in maduikit-theme maduikit-components; do
-  adopter="$work/$entry"
-  mkdir "$adopter"
-  cp -R "$ci/adopter/." "$adopter/"
-  cp "$sdk/gradlew" "$adopter/"; cp -R "$sdk/gradle" "$adopter/"
-  cd "$adopter"
-  export GRADLE_USER_HOME="$work/$entry-gradle"
-  test ! -e "$GRADLE_USER_HOME"
-  options=("-PmadStage=$stage" "-PmadSdkEntry=$entry" -PmadApple=true)
-  runlog "$entry-help" 180 bash gradlew "${flags[@]}" "${options[@]}" help
-  for target in android simulator device; do
-    case "$target" in
-      android) conf=debugCompileClasspath; task=compileDebugKotlinAndroid;;
-      simulator) conf=iosSimulatorArm64CompileKlibraries; task=compileKotlinIosSimulatorArm64;;
-      device) conf=iosArm64CompileKlibraries; task=compileKotlinIosArm64;;
-    esac
-    runlog "$entry-$target" 180 bash gradlew "${flags[@]}" "${options[@]}" "-PmadCompileConfiguration=$conf" ":composeApp:verifySdkCompile" ":composeApp:$task"
-    cp "composeApp/build/reports/sdk-$entry-$conf.txt" "$out/"
-  done
-done
-gate=stage-immutable
-python3 "$ci/verify-stage.py" "$stage" > "$out/stage-after.json"
-cmp "$out/stage-before.json" "$out/stage-after.json"
 gate=ui-adopter-source
 adopter="$work/ui-adopter"
 mkdir "$adopter"
@@ -131,19 +103,19 @@ export GRADLE_USER_HOME="$work/ui-adopter-gradle"
 test ! -e "$GRADLE_USER_HOME"
 options=("-PmadStage=$stage" -PmadApple=true)
 shasum -a 256 composeApp/src/commonMain/kotlin/TypographyAdopter.kt > "$out/ui-caller.sha256"
-runlog ui-adopter-help 180 bash gradlew "${flags[@]}" "${options[@]}" help
-for conf in debugCompileClasspath debugRuntimeClasspath iosSimulatorArm64CompileKlibraries; do
-  runlog "ui-resolve-$conf" 120 bash gradlew "${flags[@]}" "${options[@]}" "-PmadCompileConfiguration=$conf" :composeApp:verifySdkCompile
-  cp "composeApp/build/reports/sdk-maduikit-components-$conf.txt" "$out/ui-$conf.txt"
-done
-runlog ui-android-apk 300 bash gradlew "${flags[@]}" "${options[@]}" :composeApp:assembleDebug
-gate=ui-android-apk-validation
-apk=composeApp/build/outputs/apk/debug/composeApp-debug.apk
-test -s "$apk"
-unzip -tqq "$apk"
-unzip -Z1 "$apk" | grep -Fx AndroidManifest.xml
-shasum -a 256 "$apk" > "$out/ui-android-apk.sha256"
-runlog ui-ios-framework 420 bash gradlew "${flags[@]}" "${options[@]}" :composeApp:linkDebugFrameworkIosSimulatorArm64
+ios_probe(){
+  gate="$1"; local bound="$2"; shift 2
+  local rc=0 logfile="$work/$gate.log"
+  printf 'Checkpoint: %s (%s s)\n' "$gate" "$bound"
+  python3 "$ci/bounded.py" "$bound" "$logfile" "$@" || rc=$?
+  python3 "$ci/sanitize-ios.py" "$gate" "$rc" "$logfile" > "$out/$gate.json"
+  return "$rc"
+}
+conf=iosSimulatorArm64CompileKlibraries
+ios_probe ios-resolve 240 bash gradlew "${flags[@]}" "${options[@]}" "-PmadCompileConfiguration=$conf" :composeApp:verifySdkCompile
+cp "composeApp/build/reports/sdk-maduikit-components-$conf.txt" "$out/ui-$conf.txt"
+ios_probe ios-compile 300 bash gradlew "${flags[@]}" "${options[@]}" :composeApp:compileKotlinIosSimulatorArm64
+ios_probe ios-framework 420 bash gradlew "${flags[@]}" "${options[@]}" :composeApp:linkDebugFrameworkIosSimulatorArm64
 gate=ui-ios-framework-validation
 framework=composeApp/build/bin/iosSimulatorArm64/debugFramework/MadUIKitS1Adopter.framework/MadUIKitS1Adopter
 test -s "$framework"
@@ -155,4 +127,4 @@ shasum -a 256 "$framework" > "$out/ui-ios-framework.sha256"
 gate=stage-immutable-after-ui-adopter
 python3 "$ci/verify-stage.py" "$stage" > "$out/stage-after-ui.json"
 cmp "$out/stage-before.json" "$out/stage-after-ui.json"
-gate=verified-ui-android-apk-and-ios-framework-build-only
+gate=verified-ui-ios-simulator-framework-build-only
