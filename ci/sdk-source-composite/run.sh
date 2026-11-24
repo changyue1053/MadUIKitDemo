@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd -P)"
-parent=83080e6daa5ac84ea28d8958edffd18da2890c5f
-sdk_pin=49f2c1f07bccaf2036ed5bdafe53d6412da45668
-version=0.1.0-alpha06-sdk-preview01
-test "${GITHUB_REF:-}" = refs/heads/ci/sdk-alpha06-source-composite
+parent=dbd583b4dcd5fa71573c8a3e6ad7cc9bdc903af6
+sdk_pin=aba1bebcdb3c6e1b64fbbc3774e9e4d3124ef249
+version=0.1.0-alpha08-sdk-preview01
+test "${GITHUB_REF:-}" = refs/heads/ci/sdk-alpha08-source-composite
 [[ "${GITHUB_SHA:-}" =~ ^[0-9a-f]{40}$ && "${GITHUB_RUN_ID:-}" =~ ^[0-9]{1,20}$ && "${GITHUB_RUN_ATTEMPT:-}" =~ ^[0-9]{1,20}$ ]]
 tmp="$(cd "${RUNNER_TEMP:?}" && pwd -P)"
 out="$tmp/mad-source-composite-receipt"
@@ -45,7 +45,7 @@ r=dict(run=os.environ["GITHUB_RUN_ID"],attempt=os.environ["GITHUB_RUN_ATTEMPT"],
  gradleFailureCategory=category("gradle-category.json","publisherCategory",known_cause),
  selectedSourceRoots=["maduikit-components","maduikit-theme"] if root=="yes" else [],
  probeClassCompiled=compiled=="yes",
- verifiedCalls=["MadSwitch","MadIcon","MadIconButton"] if compiled=="yes" else [],
+ verifiedCalls=["MadSwitch","MadIcon","MadIconButton","MadCheckbox","MadRadio"] if compiled=="yes" else [],
  probeSourceSha256=fingerprint("source-sha"),probeClassSha256=fingerprint("class-sha"),
  scope="synthetic Android source-composite compile only; no Maven publication, native link or execution")
 p.write_text(json.dumps(r,sort_keys=True,indent=2)+"\n")
@@ -69,7 +69,8 @@ test "$(git rev-parse HEAD^)" = "$parent"
 test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
 changed="$(git diff --name-only "$parent" HEAD | LC_ALL=C sort)"
 expected="$(cat <<'FILES'
-.github/workflows/sdk-alpha06-source-composite.yml
+.github/workflows/sdk-alpha08-source-composite.yml
+ci/sdk-source-composite/check-calls.sh
 ci/sdk-source-composite/composite/composeApp/build.gradle.kts
 ci/sdk-source-composite/composite/composeApp/src/commonMain/kotlin/ControlsProbe.kt
 ci/sdk-source-composite/composite/settings.gradle.kts
@@ -112,9 +113,7 @@ grep -Fxq '> Task :composeApp:compileDebugKotlinAndroid' "$w/gradle.log"
 class="$(find "$w/app/composeApp/build" -type f -path '*/dev/mad/synthetic/typography/ControlsProbeKt.class' -print)"
 test -n "$class" && test -s "$class"
 "$JAVA_HOME/bin/javap" -c -p "$class" > "$w/probe.javap"
-grep -E 'invokestatic[[:space:]].*com/mad/maduikit/MadSwitchKt\.MadSwitch:' "$w/probe.javap" >/dev/null
-grep -E 'invokestatic[[:space:]].*com/mad/maduikit/MadIconKt\."?MadIcon-[A-Za-z0-9_-]+"?:' "$w/probe.javap" >/dev/null
-grep -E 'invokestatic[[:space:]].*com/mad/maduikit/MadIconKt\.MadIconButton:' "$w/probe.javap" >/dev/null
+bash "$here/check-calls.sh" "$w/probe.javap"
 shasum -a 256 "$class" | awk '{print $1}' > "$w/class-sha"
 shasum -a 256 composeApp/src/commonMain/kotlin/ControlsProbe.kt | awk '{print $1}' > "$w/source-sha"
 compiled=yes
