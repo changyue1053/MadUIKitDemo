@@ -5,7 +5,7 @@ import java.security.MessageDigest
 plugins { kotlin("multiplatform") version "2.2.21"; id("com.android.application") version "8.11.1"; id("org.jetbrains.kotlin.plugin.compose") version "2.2.21" }
 
 val sdkEntry = "maduikit-components"
-val sdkVersion = "0.1.0-alpha09-sdk-preview01"
+val sdkVersion = "0.1.0-alpha12-sdk-preview01"
 kotlin {
     androidTarget { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
     if (providers.gradleProperty("madApple").orNull == "true") {

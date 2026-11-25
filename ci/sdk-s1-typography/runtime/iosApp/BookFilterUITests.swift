@@ -1,79 +1,90 @@
 import XCTest
-import UIKit
-import CoreGraphics
 
 final class BookFilterUITests: XCTestCase {
-    func testAlpha09FoundationGallery() {
+    func testAlpha12TrialForm() {
         continueAfterFailure = false
         let app = XCUIApplication(bundleIdentifier: "dev.mad.synthetic.typography.ios")
         app.launch()
-        unique(app, "gallery-title", label: "Foundation gallery · alpha09")
-        let light = unique(app, "gallery-light", label: "Light")
-        let dark = unique(app, "gallery-dark", label: "Dark")
-        let brand = unique(app, "gallery-brand", label: "Brand")
-        let restored = unique(app, "gallery-restored", label: "Restored")
-        tryColor(light, expected: [49, 83, 166])
-        tryColor(dark, expected: [186, 200, 255])
-        tryColor(brand, expected: [0, 107, 86])
-        tryColor(restored, expected: [49, 83, 166])
-        unique(app, "gallery-geometry", label: "Dividers: 3/9 px @ 3.0x / bounded")
-        unique(app, "gallery-mode", label: "Mode: Online / 0")
-        let before = XCUIScreen.main.screenshot().pngRepresentation
-        let offline = unique(app, "gallery-offline", label: "Offline")
-        XCTAssertTrue(offline.isHittable)
-        offline.tap()
-        unique(app, "gallery-mode", label: "Mode: Offline / 1")
-        offline.tap()
-        let online = unique(app, "gallery-online", label: "Online")
-        XCTAssertTrue(online.isHittable)
-        online.tap()
-        unique(app, "gallery-mode", label: "Mode: Online / 2")
-        offline.tap()
-        unique(app, "gallery-mode", label: "Mode: Offline / 3")
-        retainScreen("S1-alpha09-gallery-before", before)
-        retainScreen("S1-alpha09-gallery-after", XCUIScreen.main.screenshot().pngRepresentation)
+        unique(app, "form-title", label: "Sample form · alpha12")
+        unique(app, "form-badge", label: "Form is a draft")
+        unique(app, "form-focus", label: "Focus: None")
+        unique(app, "form-values", label: "Values: ab,")
+        fieldMessage(app, "form-name", expected: "Use at least 4 characters", absent: "Use a public name")
+        let invalid = XCUIScreen.main.screenshot().pngRepresentation
+        physicalTap(app, "form-submit")
+        unique(app, "form-count", label: "Submissions: 0 / None")
+
+        physicalTap(app, "form-name")
+        unique(app, "form-focus", label: "Focus: Name")
+        let keyboard = app.keyboards.firstMatch
+        XCTAssertTrue(keyboard.waitForExistence(timeout: 12))
+        XCTAssertFalse(keyboard.frame.isEmpty)
+        // XCTest injection; does not prove real OS composition or keyboard action dispatch.
+        app.typeText("cd")
+        unique(app, "form-values", label: "Values: abcd,")
+        fieldMessage(app, "form-name", expected: "Use a public name", absent: "Use at least 4 characters")
+        physicalTap(app, "form-note")
+        unique(app, "form-focus", label: "Focus: Note")
+        XCTAssertTrue(keyboard.exists)
+        app.typeText("ok")
+        unique(app, "form-values", label: "Values: abcd,ok")
+        let editing = XCUIScreen.main.screenshot().pngRepresentation
+        physicalTap(app, "form-submit")
+        unique(app, "form-focus", label: "Focus: None")
+        unique(app, "form-count", label: "Submissions: 1 / abcd,ok")
+        unique(app, "form-badge", label: "Form is saved")
+        waitForKeyboardToClose(keyboard)
+        physicalTap(app, "form-submit")
+        unique(app, "form-count", label: "Submissions: 1 / abcd,ok")
+        physicalTap(app, "form-readonly")
+        unique(app, "form-focus", label: "Focus: Read-only")
+        waitForKeyboardToClose(keyboard)
+        physicalTap(app, "form-disabled")
+        unique(app, "form-focus", label: "Focus: Read-only")
+        waitForKeyboardToClose(keyboard)
+        unique(app, "form-locked", label: "Locked: ABC,XYZ / Edits: 0")
+        unique(app, "form-count", label: "Submissions: 1 / abcd,ok")
+        retainScreen("S2-alpha12-form-invalid", invalid)
+        retainScreen("S2-alpha12-form-editing", editing)
+        retainScreen("S2-alpha12-form-saved", XCUIScreen.main.screenshot().pngRepresentation)
     }
 
-    // Use rendered UIButton-region pixels, not colors reported by the same Kotlin fixture.
-    // Interior patches avoid the rounded corner, border, and centered text.
-    private func tryColor(_ button: XCUIElement, expected: [Int]) {
-        guard let source = button.screenshot().image.cgImage, source.width >= 240,
-              source.height >= 72, let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) else {
-            return XCTFail("No rendered color image")
-        }
-        for fraction in [0.20, 0.80] {
-            let x = Int(Double(source.width) * fraction)
-            let y = source.height / 2
-            guard let crop = source.cropping(to: CGRect(x: CGFloat(x), y: CGFloat(y), width: 1, height: 1)),
-                  let context = CGContext(data: nil, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
-                    space: colorSpace, bitmapInfo: CGBitmapInfo.byteOrder32Big.rawValue |
-                        CGImageAlphaInfo.premultipliedLast.rawValue) else {
-                return XCTFail("No sRGB color sample")
-            }
-            context.draw(crop, in: CGRect(x: 0, y: 0, width: 1, height: 1))
-            guard let data = context.data?.assumingMemoryBound(to: UInt8.self) else {
-                return XCTFail("No decoded sRGB color sample")
-            }
-            XCTAssertEqual(data[3], 255)
-            for channel in 0..<3 {
-                XCTAssertLessThanOrEqual(abs(Int(data[channel]) - expected[channel]), 4)
-            }
-        }
+    private func waitForKeyboardToClose(_ keyboard: XCUIElement) {
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"), object: keyboard)], timeout: 10), .completed)
+    }
+
+    private func fieldMessage(_ app: XCUIApplication, _ tag: String, expected: String, absent: String) {
+        let field = unique(app, tag)
+        let message = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", expected))
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            field.label.contains(expected) || message.firstMatch.exists
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 12), .completed)
+        XCTAssertFalse(field.label.contains(absent))
+        XCTAssertFalse(app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", absent)).firstMatch.exists)
+    }
+
+    private func physicalTap(_ app: XCUIApplication, _ tag: String) {
+        let frame = unique(app, tag).frame
+        let origin = app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
+        origin.withOffset(CGVector(dx: frame.midX - app.frame.minX, dy: frame.midY - app.frame.minY)).tap()
     }
 
     @discardableResult
-    private func unique(_ app: XCUIApplication, _ tag: String, label: String) -> XCUIElement {
+    private func unique(_ app: XCUIApplication, _ tag: String, label: String? = nil) -> XCUIElement {
         let query = app.descendants(matching: .any).matching(NSPredicate(format: "identifier == %@", tag))
         XCTAssertTrue(query.firstMatch.waitForExistence(timeout: 30))
         XCTAssertEqual(query.count, 1)
-        let element = query.element(boundBy: 0)
-        XCTAssertEqual(element.identifier, tag)
-        let matches = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", label), object: element)
-        XCTAssertEqual(XCTWaiter.wait(for: [matches], timeout: 15), .completed)
-        let frame = element.frame
+        let node = query.element(boundBy: 0)
+        if let label = label {
+            let expected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", label), object: node)
+            XCTAssertEqual(XCTWaiter.wait(for: [expected], timeout: 15), .completed)
+        }
+        let frame = node.frame
         XCTAssertTrue(frame.origin.x.isFinite && frame.origin.y.isFinite && frame.width.isFinite && frame.height.isFinite)
         XCTAssertTrue(!frame.isEmpty && app.frame.contains(frame))
-        return element
+        return node
     }
 
     private func retainScreen(_ name: String, _ bytes: Data) {

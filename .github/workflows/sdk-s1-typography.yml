@@ -1,17 +1,17 @@
-name: Synthetic alpha09 iOS foundation gallery without binary export
+name: Synthetic alpha12 iOS form without binary export
 on:
   push:
-    branches: [ci/sdk-alpha09-ios-gallery]
+    branches: [ci/sdk-alpha12-ios-form]
     paths:
       - '.github/workflows/sdk-s1-typography.yml'
       - 'ci/sdk-s1-typography/**'
 permissions: {contents: read}
 concurrency:
-  group: sdk-alpha09-ios-gallery
+  group: sdk-alpha12-ios-form
   cancel-in-progress: false
 jobs:
   build-and-run-without-export:
-    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-alpha09-ios-gallery'
+    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-alpha12-ios-form'
     runs-on: macos-26
     timeout-minutes: 65
     steps:
@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: changyue1053/MadUIKit
-          ref: 3ca8365c86be96594a4a8cbe83eb81ecb4efbf5a
+          ref: dee2ece216db4b36fa28400dcc767a241fc4f367
           path: ci-input/sdk
           persist-credentials: false
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
@@ -66,7 +66,8 @@ jobs:
             ${{ runner.temp }}/mad-s1-runtime-receipt/guest-selected.json
             ${{ runner.temp }}/mad-s1-runtime-receipt/guest-booted.json
             ${{ runner.temp }}/mad-s1-runtime-receipt/runtime.json
-            ${{ runner.temp }}/mad-s1-runtime-receipt/S1-alpha09-gallery-before.png
-            ${{ runner.temp }}/mad-s1-runtime-receipt/S1-alpha09-gallery-after.png
+            ${{ runner.temp }}/mad-s1-runtime-receipt/S2-alpha12-form-invalid.png
+            ${{ runner.temp }}/mad-s1-runtime-receipt/S2-alpha12-form-editing.png
+            ${{ runner.temp }}/mad-s1-runtime-receipt/S2-alpha12-form-saved.png
           if-no-files-found: warn
           retention-days: 7
