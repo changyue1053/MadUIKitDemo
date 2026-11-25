@@ -10,7 +10,7 @@ work="$(cd "$work" && pwd -P)"
 gate=stock-arm-host
 trap 'rc=$?; printf "gate=%s\nexit=%s\nscope=synthetic iosSimulatorArm64 only\n" "$gate" "$rc" > "$out/result.txt"; exit "$rc"' EXIT
 runlog(){ gate="$1"; local t="$2"; shift 2; python3 "$ci/bounded.py" "$t" "$work/$gate.log" "$@"; }
-test "${GITHUB_REF:?}" = refs/heads/ci/sdk-alpha19-ios-transfer-diagnostic
+test "${GITHUB_REF:?}" = refs/heads/ci/sdk-alpha19-ios-transfer-nav-causal
 test "$(git rev-parse HEAD)" = "${GITHUB_SHA:?}"
 test "$(uname -s)-$(uname -m)-${ImageOS:?}" = Darwin-arm64-macos26
 image="${ImageVersion:?}"

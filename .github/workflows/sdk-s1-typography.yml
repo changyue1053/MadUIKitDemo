@@ -1,17 +1,17 @@
 name: Synthetic alpha19 iOS Atlas transfer without binary export
 on:
   push:
-    branches: [ci/sdk-alpha19-ios-transfer-diagnostic]
+    branches: [ci/sdk-alpha19-ios-transfer-nav-causal]
     paths:
       - '.github/workflows/sdk-s1-typography.yml'
       - 'ci/sdk-s1-typography/**'
 permissions: {contents: read}
 concurrency:
-  group: sdk-alpha19-ios-transfer-diagnostic
+  group: sdk-alpha19-ios-transfer-nav-causal
   cancel-in-progress: false
 jobs:
   build-and-run-without-export:
-    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-alpha19-ios-transfer-diagnostic'
+    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-alpha19-ios-transfer-nav-causal'
     runs-on: macos-26
     timeout-minutes: 65
     steps:

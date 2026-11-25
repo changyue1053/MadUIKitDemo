@@ -4,7 +4,7 @@ from pathlib import Path
 import re
 import sys
 
-PHASES = ("title", "navigation", "progress", "modal", "background", "cancel", "confirm", "restored")
+PHASES = ("title", "nav-initial", "nav-first-selector", "nav-first-bounds", "nav-first-hit", "nav-held", "nav-second-selector", "nav-second-bounds", "nav-second-hit", "nav-accepted", "progress", "modal", "background", "cancel", "confirm", "restored")
 MARK = re.compile(r"MAD-XCT-ASSERT\[(" + "|".join(PHASES) + r")\]")
 IDENTITY = "BookFilterUITests/testAlpha19AtlasTransfer"
 MAX_SUMMARY = 2_000_000

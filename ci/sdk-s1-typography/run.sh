@@ -21,8 +21,8 @@ runlog(){
   printf '%s\t%s\t%s\n' "$gate" "$rc" "$detail" >> "$out/checkpoints.tsv"
   return "$rc"
 }
-base=669ada1d650d645592c5642385a484ec3d8c855d
-branch=refs/heads/ci/sdk-alpha19-ios-transfer-diagnostic
+base=008ad3643b10bb836325db3069b70337fa8d4c7c
+branch=refs/heads/ci/sdk-alpha19-ios-transfer-nav-causal
 test "${GITHUB_REF:?}" = "$branch"
 pin=c84f26b1d3eccecfeed337ed66ef975c95b36fed
 test "$(git rev-parse HEAD)" = "${GITHUB_SHA:?}"

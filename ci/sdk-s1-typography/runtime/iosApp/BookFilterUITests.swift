@@ -2,7 +2,16 @@ import XCTest
 
 final class BookFilterUITests: XCTestCase {
     private enum Phase: String {
-        case title, navigation, progress, modal, background, cancel, confirm, restored
+        case title, progress, modal, background, cancel, confirm, restored
+        case navInitial = "nav-initial"
+        case navFirstSelector = "nav-first-selector"
+        case navFirstBounds = "nav-first-bounds"
+        case navFirstHit = "nav-first-hit"
+        case navHeld = "nav-held"
+        case navSecondSelector = "nav-second-selector"
+        case navSecondBounds = "nav-second-bounds"
+        case navSecondHit = "nav-second-hit"
+        case navAccepted = "nav-accepted"
     }
     private var phase = Phase.title
     private var mark: String { "MAD-XCT-ASSERT[\(phase.rawValue)]" }
@@ -13,13 +22,13 @@ final class BookFilterUITests: XCTestCase {
         app.launch()
         tagged(app, "transfer-title", label: "Transfer center")
         tagged(app, "transfer-progress-text", label: "Progress: Estimating")
-        phase = .navigation
+        phase = .navInitial
         tagged(app, "transfer-route", label: "Selected: Overview / Requests: 0")
-        let target = exact(app, "Transfers")
-        XCTAssertTrue(target.isHittable, mark)
-        target.tap()
+        tapTransfers(app, second: false)
+        phase = .navHeld
         tagged(app, "transfer-route", label: "Selected: Overview / Requests: 1")
-        exact(app, "Transfers").tap()
+        tapTransfers(app, second: true)
+        phase = .navAccepted
         tagged(app, "transfer-route", label: "Selected: Transfers / Requests: 2")
         phase = .progress
         tap(app, "transfer-resolve")
@@ -65,6 +74,22 @@ final class BookFilterUITests: XCTestCase {
         tagged(app, "transfer-events", label: "Details: 2 / Cancel: 1 / Confirm: 1 / Dismiss: 0")
         retain("S3-alpha19-transfer-progress", progress)
         retain("S3-alpha19-transfer-confirm", confirmation)
+    }
+
+    private func tapTransfers(_ app: XCUIApplication, second: Bool) {
+        phase = second ? .navSecondSelector : .navFirstSelector
+        let transfers = labels(app, "Transfers")
+        XCTAssertTrue(transfers.firstMatch.waitForExistence(timeout: 25), mark)
+        XCTAssertEqual(transfers.count, 1, mark)
+        let node = transfers.element(boundBy: 0)
+        XCTAssertEqual(node.label, "Transfers", mark)
+        phase = second ? .navSecondBounds : .navFirstBounds
+        let f = node.frame
+        XCTAssertTrue(f.origin.x.isFinite && f.origin.y.isFinite && f.width.isFinite && f.height.isFinite, mark)
+        XCTAssertTrue(!f.isEmpty && app.frame.contains(f), mark)
+        phase = second ? .navSecondHit : .navFirstHit
+        XCTAssertTrue(node.isHittable, mark)
+        node.tap()
     }
 
     private func labels(_ app: XCUIApplication, _ label: String) -> XCUIElementQuery {
