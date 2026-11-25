@@ -7,7 +7,7 @@ mkdir "$out"
 gate=preflight
 work="$(mktemp -d "$RUNNER_TEMP/mad-s1.XXXXXX")"
 work="$(cd "$work" && pwd -P)"
-trap 'rc=$?; printf "gate=%s\nexit=%s\nscope=synthetic iOS simulator alpha19 Atlas transfer navigation, visible progress, and confirmation; no Android/Harmony execution, device, or packaging\n" "$gate" "$rc" > "$out/result.txt"; exit "$rc"' EXIT
+trap 'rc=$?; printf "gate=%s\nexit=%s\nscope=synthetic iOS simulator alpha28 search clear, Latin keys, focus retention, field length; no Android/Harmony execution, device, or packaging\n" "$gate" "$rc" > "$out/result.txt"; exit "$rc"' EXIT
 runlog(){
   gate="$1"; local bound="$2"; shift 2
   printf 'Checkpoint: %s (%s s)\n' "$gate" "$bound"
@@ -21,10 +21,10 @@ runlog(){
   printf '%s\t%s\t%s\n' "$gate" "$rc" "$detail" >> "$out/checkpoints.tsv"
   return "$rc"
 }
-base=d3684d81bf0b42cf8439b1077aca20a757767077
-branch=refs/heads/ci/sdk-alpha19-ios-transfer-modal-causal
+base=d87a83cf7225559ca26db3d0b1aeea54c7acb5e1
+branch=refs/heads/ci/sdk-alpha28-ios-search-counter
 test "${GITHUB_REF:?}" = "$branch"
-pin=c84f26b1d3eccecfeed337ed66ef975c95b36fed
+pin=99d7c390c718c1d115b491c8de3d64de443bad7b
 test "$(git rev-parse HEAD)" = "${GITHUB_SHA:?}"
 test "$(git rev-parse HEAD^)" = "$base"
 changed="$(git diff --name-only "$base" HEAD | LC_ALL=C sort)"
@@ -33,7 +33,13 @@ expected="$(cat <<'FILES'
 ci/sdk-s1-typography/run.sh
 ci/sdk-s1-typography/runtime/iosApp/BookFilterUITests.swift
 ci/sdk-s1-typography/runtime/run-host.sh
+ci/sdk-s1-typography/runtime/runtime-proof.py
+ci/sdk-s1-typography/runtime/same-job-framework.py
 ci/sdk-s1-typography/runtime/xctest-outcome.py
+ci/sdk-s1-typography/ui-adopter/composeApp/build.gradle.kts
+ci/sdk-s1-typography/ui-adopter/composeApp/src/commonMain/kotlin/AtlasSearchCounter.kt
+ci/sdk-s1-typography/ui-adopter/composeApp/src/iosMain/kotlin/FixtureViewController.kt
+ci/sdk-s1-typography/verify-stage.py
 FILES
 )"
 test "$changed" = "$expected"
@@ -105,7 +111,7 @@ cd "$adopter"
 export GRADLE_USER_HOME="$work/ui-adopter-gradle"
 test ! -e "$GRADLE_USER_HOME"
 options=("-PmadStage=$stage" -PmadApple=true)
-shasum -a 256 composeApp/src/commonMain/kotlin/AtlasTransfer.kt > "$out/ui-caller.sha256"
+shasum -a 256 composeApp/src/commonMain/kotlin/AtlasSearchCounter.kt > "$out/ui-caller.sha256"
 ios_probe(){
   gate="$1"; local bound="$2"; shift 2
   local rc=0 logfile="$work/$gate.log"
@@ -153,4 +159,4 @@ python3 "$ci/runtime/same-job-framework.py" record "$(dirname "$framework")" "$p
   "$(awk '{print $1}' "$out/ui-caller.sha256")" "$(sha "$out/stage-before.json")"
 gate=same-job-synthetic-native-host
 (cd "$root"; bash "$ci/runtime/run-host.sh" "$(dirname "$framework")" "$proof")
-gate=verified-synthetic-alpha19-ios-transfer
+gate=verified-synthetic-alpha28-ios-search-counter

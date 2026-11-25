@@ -10,7 +10,7 @@ work="$(cd "$work" && pwd -P)"
 gate=stock-arm-host
 trap 'rc=$?; printf "gate=%s\nexit=%s\nscope=synthetic iosSimulatorArm64 only\n" "$gate" "$rc" > "$out/result.txt"; exit "$rc"' EXIT
 runlog(){ gate="$1"; local t="$2"; shift 2; python3 "$ci/bounded.py" "$t" "$work/$gate.log" "$@"; }
-test "${GITHUB_REF:?}" = refs/heads/ci/sdk-alpha19-ios-transfer-modal-causal
+test "${GITHUB_REF:?}" = refs/heads/ci/sdk-alpha28-ios-search-counter
 test "$(git rev-parse HEAD)" = "${GITHUB_SHA:?}"
 test "$(uname -s)-$(uname -m)-${ImageOS:?}" = Darwin-arm64-macos26
 image="${ImageVersion:?}"
@@ -37,7 +37,7 @@ cp -R "$local_framework" "$framework"
 python3 "$ci/runtime/same-job-framework.py" verify "$framework" "$proof"
 printf '%s  %s\n' \
   "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["callerSha256"])' "$proof")" \
-  "$ci/ui-adopter/composeApp/src/commonMain/kotlin/AtlasTransfer.kt" | shasum -a 256 -c
+  "$ci/ui-adopter/composeApp/src/commonMain/kotlin/AtlasSearchCounter.kt" | shasum -a 256 -c
 binary="$framework/MadUIKitS1Adopter"
 xcrun lipo -archs "$binary" | grep -Fx arm64
 xcrun otool -l "$binary" | awk '/cmd LC_BUILD_VERSION/ { active=1; next } active && $1=="platform" {print $2; active=0}' | sort -u > "$out/framework-platform.txt"
@@ -91,7 +91,7 @@ xc="$work/ui.xcresult"
 test_rc=0
 runlog test 360 xcodebuild -xctestrun "$test_run" -destination "platform=iOS Simulator,id=$sim" \
  -parallel-testing-enabled NO -resultBundlePath "$xc" \
- -only-testing:MadUIKitDemoUITests/BookFilterUITests/testAlpha19AtlasTransfer test-without-building || test_rc=$?
+ -only-testing:MadUIKitDemoUITests/BookFilterUITests/testAlpha28SearchCounter test-without-building || test_rc=$?
 summary_state=missing-result-bundle
 if [[ -d "$xc" && ! -L "$xc" ]]; then
   summary_state=summary-unavailable
@@ -106,8 +106,8 @@ test "$summary_state" = read
 mkdir "$work/attachments" "$work/verified"
 xcrun xcresulttool export attachments --path "$xc" --output-path "$work/attachments"
 python3 "$ci/runtime/runtime-proof.py" "$work/summary.json" "$work/attachments" "$work/verified" "$proof"
-for name in S3-alpha19-transfer-progress S3-alpha19-transfer-confirm; do
+for name in S2-alpha28-search-over-limit S2-alpha28-search-cleared; do
   runlog "imageio-$name" 45 "$validator" "$work/verified/$name.png" books
 done
-cp "$work/verified/"{S3-alpha19-transfer-progress.png,S3-alpha19-transfer-confirm.png,runtime.json} "$out/"
-gate=verified-synthetic-alpha19-ios-transfer
+cp "$work/verified/"{S2-alpha28-search-over-limit.png,S2-alpha28-search-cleared.png,runtime.json} "$out/"
+gate=verified-synthetic-alpha28-ios-search-counter
