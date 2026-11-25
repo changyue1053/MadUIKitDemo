@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd -P)"
-parent=3339f822bd6d51110a2e0b556adda34e22bc35ba
-sdk_pin=c84f26b1d3eccecfeed337ed66ef975c95b36fed
-version=0.1.0-alpha19-sdk-preview01
-test "${GITHUB_REF:-}" = refs/heads/ci/sdk-alpha19-source-composite
+parent=1dc3a9a1f1049aa03dd832525aad50a2f90a9d9e
+sdk_pin=ba01bdf981085bfd4be9dde644a619f62ceffbe2
+version=0.1.0-alpha27-sdk-preview01
+test "${GITHUB_REF:-}" = refs/heads/ci/sdk-alpha27-source-composite
 [[ "${GITHUB_SHA:-}" =~ ^[0-9a-f]{40}$ && "${GITHUB_RUN_ID:-}" =~ ^[0-9]{1,20}$ && "${GITHUB_RUN_ATTEMPT:-}" =~ ^[0-9]{1,20}$ ]]
 tmp="$(cd "${RUNNER_TEMP:?}" && pwd -P)"
 out="$tmp/mad-source-composite-receipt"
@@ -44,13 +44,15 @@ r=dict(run=os.environ["GITHUB_RUN_ID"],attempt=os.environ["GITHUB_RUN_ATTEMPT"],
  stockStatus=category("stock-status.txt",None,known_stock),
  gradleFailureCategory=category("gradle-category.json","publisherCategory",known_cause),
  selectedSourceRoots=["maduikit-components","maduikit-theme"] if root=="yes" else [],
- probeClassCompiled=compiled=="yes", formClassCompiled=compiled=="yes", collectionClassCompiled=compiled=="yes", flowClassCompiled=compiled=="yes",
- verifiedCalls=["MadSwitch","MadIcon","MadIconButton","MadCheckbox","MadRadio","MadDivider","MadActionButton","MadTextField","MadBadge","MadSearchField","MadListItem","MadAvatar","MadCard","MadNavigationBar","MadNavigationItem","MadLinearProgress","MadConfirmDialog"] if compiled=="yes" else [],
+ probeClassCompiled=compiled=="yes", formClassCompiled=compiled=="yes", collectionClassCompiled=compiled=="yes", flowClassCompiled=compiled=="yes", workspaceClassCompiled=compiled=="yes",
+ verifiedCalls=["MadSwitch","MadIcon","MadIconButton","MadCheckbox","MadRadio","MadDivider","MadActionButton","MadTextField","MadBadge","MadSearchField","MadListItem","MadAvatar","MadCard","MadNavigationBar","MadNavigationItem","MadLinearProgress","MadConfirmDialog","MadTopAppBar","MadStatePanel","MadBanner","MadBottomSheet","MadScaffold","MadTextArea","MadDecoratedTextField","MadSearchFieldWithClear"] if compiled=="yes" else [],
  verifiedButtonVariants=["Primary","Secondary","Text","Danger"] if compiled=="yes" else [],
  probeSourceSha256=fingerprint("source-sha"),probeClassSha256=fingerprint("class-sha"),
  formSourceSha256=fingerprint("form-source-sha"),formClassSha256=fingerprint("form-class-sha"),
  collectionSourceSha256=fingerprint("collection-source-sha"),collectionClassSha256=fingerprint("collection-class-sha"),
  flowSourceSha256=fingerprint("flow-source-sha"),flowClassSha256=fingerprint("flow-class-sha"),
+ workspaceSourceSha256=fingerprint("workspace-source-sha"),workspaceClassSha256=fingerprint("workspace-class-sha"),
+ verifiedWorkspaceCalls={"MadTopAppBar":1,"MadStatePanel":1,"MadBanner":1,"MadBottomSheet":1,"MadScaffold":1,"MadTextArea":1,"MadDecoratedTextField":1,"MadSearchFieldWithClear":1} if compiled=="yes" else {},
  verifiedFlowCalls={"MadNavigationBar":1,"MadNavigationItem":2,"MadLinearProgress":1,"MadConfirmDialog":1} if compiled=="yes" else {},
  verifiedCollectionCalls={"MadSearchField":1,"MadListItem":1,"MadAvatar":1,"MadCard":1} if compiled=="yes" else {},
  verifiedFormCalls={"MadTextField":4,"MadBadge":1} if compiled=="yes" else {},
@@ -76,10 +78,10 @@ test "$(git rev-parse HEAD^)" = "$parent"
 test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
 changed="$(git diff --name-only "$parent" HEAD | LC_ALL=C sort)"
 expected="$(cat <<'FILES'
-.github/workflows/sdk-alpha19-source-composite.yml
-ci/sdk-source-composite/check-flow-calls.sh
+.github/workflows/sdk-alpha27-source-composite.yml
+ci/sdk-source-composite/check-workspace-calls.sh
 ci/sdk-source-composite/composite/composeApp/build.gradle.kts
-ci/sdk-source-composite/composite/composeApp/src/commonMain/kotlin/FlowProbe.kt
+ci/sdk-source-composite/composite/composeApp/src/commonMain/kotlin/WorkspaceProbe.kt
 ci/sdk-source-composite/composite/settings.gradle.kts
 ci/sdk-source-composite/run.sh
 FILES
@@ -113,6 +115,9 @@ printf '%s\n' "$collection_sha" > "$w/collection-source-sha"
 flow_sha=b72c297ed3a25c463820406afec07a73407e754b69b3bbb54e93458adfa67f7d
 printf '%s  %s\n' "$flow_sha" composeApp/src/commonMain/kotlin/FlowProbe.kt | shasum -a 256 -c
 printf '%s\n' "$flow_sha" > "$w/flow-source-sha"
+workspace_sha=239460b1b9f6bec8f5729cc37b3c15e89091fcea388388425ceff37317bbec4c
+printf '%s  %s\n' "$workspace_sha" composeApp/src/commonMain/kotlin/WorkspaceProbe.kt | shasum -a 256 -c
+printf '%s\n' "$workspace_sha" > "$w/workspace-source-sha"
 gate=resolve-and-compile-android
 export GRADLE_USER_HOME="$w/gradle"
 set +e
@@ -154,5 +159,11 @@ test -n "$class" && test -s "$class"
 "$JAVA_HOME/bin/javap" -c -p "$class" > "$w/flow.javap"
 bash "$here/check-flow-calls.sh" "$w/flow.javap"
 shasum -a 256 "$class" | awk '{print $1}' > "$w/flow-class-sha"
+gate=check-actual-workspace-compile-output
+class="$(find "$w/app/composeApp/build" -type f -path '*/dev/mad/synthetic/typography/WorkspaceProbeKt.class' -print)"
+test -n "$class" && test -s "$class"
+"$JAVA_HOME/bin/javap" -c -p "$class" > "$w/workspace.javap"
+bash "$here/check-workspace-calls.sh" "$w/workspace.javap"
+shasum -a 256 "$class" | awk '{print $1}' > "$w/workspace-class-sha"
 compiled=yes
 gate=android-source-composite-compile-passed
