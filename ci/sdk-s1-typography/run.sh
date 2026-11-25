@@ -7,7 +7,7 @@ mkdir "$out"
 gate=preflight
 work="$(mktemp -d "$RUNNER_TEMP/mad-s1.XXXXXX")"
 work="$(cd "$work" && pwd -P)"
-trap 'rc=$?; printf "gate=%s\nexit=%s\nscope=synthetic iOS simulator alpha16 Atlas directory results, row selection and explicit search; no Android/Harmony execution, device, or packaging\n" "$gate" "$rc" > "$out/result.txt"; exit "$rc"' EXIT
+trap 'rc=$?; printf "gate=%s\nexit=%s\nscope=synthetic iOS simulator alpha19 Atlas transfer navigation, visible progress, and confirmation; no Android/Harmony execution, device, or packaging\n" "$gate" "$rc" > "$out/result.txt"; exit "$rc"' EXIT
 runlog(){
   gate="$1"; local bound="$2"; shift 2
   printf 'Checkpoint: %s (%s s)\n' "$gate" "$bound"
@@ -21,10 +21,10 @@ runlog(){
   printf '%s\t%s\t%s\n' "$gate" "$rc" "$detail" >> "$out/checkpoints.tsv"
   return "$rc"
 }
-base=d11f83d85c0bda50aa543fdd9fbc5b5036dd57e1
-branch=refs/heads/ci/sdk-alpha16-ios-atlas
+base=90a19c5f7ce451f505dd6f0b769d4014b86fc9a7
+branch=refs/heads/ci/sdk-alpha19-ios-transfer
 test "${GITHUB_REF:?}" = "$branch"
-pin=f891df864e0a3557f77e46eebff075ff2cb1efdb
+pin=c84f26b1d3eccecfeed337ed66ef975c95b36fed
 test "$(git rev-parse HEAD)" = "${GITHUB_SHA:?}"
 test "$(git rev-parse HEAD^)" = "$base"
 changed="$(git diff --name-only "$base" HEAD | LC_ALL=C sort)"
@@ -36,7 +36,7 @@ ci/sdk-s1-typography/runtime/run-host.sh
 ci/sdk-s1-typography/runtime/runtime-proof.py
 ci/sdk-s1-typography/runtime/same-job-framework.py
 ci/sdk-s1-typography/ui-adopter/composeApp/build.gradle.kts
-ci/sdk-s1-typography/ui-adopter/composeApp/src/commonMain/kotlin/AtlasDirectory.kt
+ci/sdk-s1-typography/ui-adopter/composeApp/src/commonMain/kotlin/AtlasTransfer.kt
 ci/sdk-s1-typography/ui-adopter/composeApp/src/iosMain/kotlin/FixtureViewController.kt
 ci/sdk-s1-typography/verify-stage.py
 FILES
@@ -110,7 +110,7 @@ cd "$adopter"
 export GRADLE_USER_HOME="$work/ui-adopter-gradle"
 test ! -e "$GRADLE_USER_HOME"
 options=("-PmadStage=$stage" -PmadApple=true)
-shasum -a 256 composeApp/src/commonMain/kotlin/AtlasDirectory.kt > "$out/ui-caller.sha256"
+shasum -a 256 composeApp/src/commonMain/kotlin/AtlasTransfer.kt > "$out/ui-caller.sha256"
 ios_probe(){
   gate="$1"; local bound="$2"; shift 2
   local rc=0 logfile="$work/$gate.log"
@@ -158,4 +158,4 @@ python3 "$ci/runtime/same-job-framework.py" record "$(dirname "$framework")" "$p
   "$(awk '{print $1}' "$out/ui-caller.sha256")" "$(sha "$out/stage-before.json")"
 gate=same-job-synthetic-native-host
 (cd "$root"; bash "$ci/runtime/run-host.sh" "$(dirname "$framework")" "$proof")
-gate=verified-synthetic-alpha16-ios-atlas
+gate=verified-synthetic-alpha19-ios-transfer

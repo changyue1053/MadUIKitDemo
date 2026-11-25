@@ -14,7 +14,7 @@ def walk(x):
 manifest=list(walk(json.loads((attachments/"manifest.json").read_text())))
 hashes={}
 originals={}
-for name in ("S2-alpha16-atlas-results","S2-alpha16-atlas-empty"):
+for name in ("S3-alpha19-transfer-progress","S3-alpha19-transfer-confirm"):
     selected=[e for e in manifest if re.fullmatch(re.escape(name)+r"(?:_[A-Za-z0-9_-]+)?\.png",e.get("suggestedHumanReadableName",""))]
     if len(selected)!=1: raise SystemExit("Missing or ambiguous exact original screenshot")
     filename=selected[0]["exportedFileName"]
@@ -28,9 +28,11 @@ for name in ("S2-alpha16-atlas-results","S2-alpha16-atlas-empty"):
 if len(set(hashes.values()))!=2: raise SystemExit("Screenshots did not change")
 for name, data in originals.items():
     (output/(name+".png")).write_bytes(data)
-receipt=dict(runtime="passed",scope="synthetic iOS simulator only; not S2 complete",
-    atlas=dict(nativeKeyboardVisible=True,entryMethod="XCUITest ASCII typeText",submitMethod="explicit host button",
-               initialRows=3,finalRows=0,submissions=1,selectedContextRetained=True,
-               nativeImeCompositionVerified=False,nativeImeSearchActionVerified=False),
+receipt=dict(runtime="passed",scope="synthetic iOS simulator only; not S3 complete",
+    transfer=dict(routeRequests=2,firstRouteRequestDeclined=True,finalDestination="Transfers",
+                  visibleProgress=["Estimating","42%"],cancelCallbacks=1,confirmCallbacks=1,
+                  ambientDismissals=0,physicalBackgroundTapBlocked=True,postModalBackgroundRestored=True,
+                  finalStatus="Paused",nativeProgressAccessibilityVerified=False,
+                  nativeBackEscapeOrVoiceOverVerified=False),
     screenshots=hashes,framework=json.loads(transfer.read_text()))
 (output/"runtime.json").write_text(json.dumps(receipt,sort_keys=True,indent=2)+"\n")

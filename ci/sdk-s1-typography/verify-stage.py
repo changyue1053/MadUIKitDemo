@@ -1,7 +1,7 @@
 """Verify the disposable simulator-only SDK repository; not a release package."""
 import hashlib, json, re, sys, zipfile
 from pathlib import Path
-stage=Path(sys.argv[1]); base=stage/'com/mad/maduikit'; ver='0.1.0-alpha16-sdk-preview01'
+stage=Path(sys.argv[1]); base=stage/'com/mad/maduikit'; ver='0.1.0-alpha19-sdk-preview01'
 def require(ok,reason):
  if not ok:raise ValueError(reason)
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
