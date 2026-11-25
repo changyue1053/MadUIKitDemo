@@ -1,0 +1,37 @@
+name: Alpha28 unified Maven compile receipt without binaries
+on:
+  push:
+    branches: [ci/sdk-alpha28-maven-no-export]
+    paths: ['.github/workflows/sdk-alpha28-maven-no-export.yml', 'ci/sdk-alpha28-stage/**']
+permissions: {contents: read}
+concurrency:
+  group: alpha28-unified-maven-no-export
+  cancel-in-progress: false
+jobs:
+  compile-only:
+    if: >-
+      github.repository == 'changyue1053/MadUIKitDemo' &&
+      github.ref == 'refs/heads/ci/sdk-alpha28-maven-no-export' &&
+      contains(github.event.head_commit.message, 'MADSDK_STAGE_REVIEWED: 99d7c390c718c1d115b491c8de3d64de443bad7b')
+    runs-on: macos-26
+    timeout-minutes: 42
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false, fetch-depth: 2}
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: changyue1053/MadUIKit
+          ref: 99d7c390c718c1d115b491c8de3d64de443bad7b
+          path: ci-input/sdk
+          persist-credentials: false
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with: {distribution: temurin, java-version: '17'}
+      - name: Stage once and compile both targets
+        run: bash ci/sdk-alpha28-stage/run.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: alpha28-unified-maven-compile-receipt-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/mad-alpha28-stage-receipt/alpha28-stage.json
+          if-no-files-found: warn
+          retention-days: 7
