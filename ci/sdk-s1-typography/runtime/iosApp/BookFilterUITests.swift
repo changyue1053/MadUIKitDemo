@@ -2,7 +2,24 @@ import XCTest
 
 final class BookFilterUITests: XCTestCase {
     private enum Phase: String {
-        case title, progress, modal, background, cancel, confirm, restored
+        case title, progress, modal, background, restored
+        case cancelSelector = "cancel-selector"
+        case cancelBounds = "cancel-bounds"
+        case cancelHit = "cancel-hit"
+        case cancelClosed = "cancel-closed"
+        case cancelEvents = "cancel-events"
+        case cancelRunning = "cancel-running"
+        case cancelRoute = "cancel-route"
+        case cancelProgress = "cancel-progress"
+        case confirmOpen = "confirm-open"
+        case confirmSelector = "confirm-selector"
+        case confirmBounds = "confirm-bounds"
+        case confirmHit = "confirm-hit"
+        case confirmClosed = "confirm-closed"
+        case confirmEvents = "confirm-events"
+        case confirmPaused = "confirm-paused"
+        case confirmRoute = "confirm-route"
+        case confirmProgress = "confirm-progress"
         case navInitial = "nav-initial"
         case navFirstSelector = "nav-first-selector"
         case navFirstBounds = "nav-first-bounds"
@@ -52,22 +69,31 @@ final class BookFilterUITests: XCTestCase {
         origin.withOffset(CGVector(dx: backgroundFrame.midX - app.frame.minX,
                                    dy: backgroundFrame.midY - app.frame.minY)).tap()
         _ = exact(app, "Pause this transfer?")
-        phase = .cancel
-        exact(app, "Keep transferring").tap()
+        tapModalAction(app, confirm: false)
+        phase = .cancelClosed
         waitClosed(app)
+        phase = .cancelEvents
         tagged(app, "transfer-events", label: "Details: 1 / Cancel: 1 / Confirm: 0 / Dismiss: 0")
+        phase = .cancelRunning
         tagged(app, "transfer-status", label: "Status: Running")
+        phase = .cancelRoute
         tagged(app, "transfer-route", label: "Selected: Transfers / Requests: 2")
+        phase = .cancelProgress
         tagged(app, "transfer-progress-text", label: "Progress: 42%")
 
-        phase = .confirm
+        phase = .confirmOpen
         tap(app, "transfer-pause")
         _ = exact(app, "Pause this transfer?")
-        exact(app, "Pause now").tap()
+        tapModalAction(app, confirm: true)
+        phase = .confirmClosed
         waitClosed(app)
+        phase = .confirmEvents
         tagged(app, "transfer-events", label: "Details: 1 / Cancel: 1 / Confirm: 1 / Dismiss: 0")
+        phase = .confirmPaused
         tagged(app, "transfer-status", label: "Status: Paused")
+        phase = .confirmRoute
         tagged(app, "transfer-route", label: "Selected: Transfers / Requests: 2")
+        phase = .confirmProgress
         tagged(app, "transfer-progress-text", label: "Progress: 42%")
         phase = .restored
         tap(app, "transfer-details")
@@ -99,6 +125,31 @@ final class BookFilterUITests: XCTestCase {
         XCTAssertTrue(f.origin.x.isFinite && f.origin.y.isFinite && f.width.isFinite && f.height.isFinite, mark)
         XCTAssertTrue(!f.isEmpty && app.frame.contains(f), mark)
         phase = second ? .navSecondHit : .navFirstHit
+        XCTAssertTrue(node.isHittable, mark)
+        node.tap()
+    }
+
+    private func tapModalAction(_ app: XCUIApplication, confirm: Bool) {
+        phase = confirm ? .confirmSelector : .cancelSelector
+        let expected = confirm ? "Pause now" : "Keep transferring"
+        let predicate = NSPredicate(format: "label == %@", expected)
+        let buttons = app.buttons.matching(predicate)
+        _ = buttons.firstMatch.waitForExistence(timeout: 25)
+        let allCount = app.descendants(matching: .any).matching(predicate).count
+        let buttonCount = buttons.count
+        func bucket(_ count: Int) -> String { count == 0 ? "zero" : count == 1 ? "one" : "multiple" }
+        let action = confirm ? "confirm" : "cancel"
+        let census = "MAD-XCT-MODAL[\(action):\(bucket(allCount)):\(bucket(buttonCount))]"
+        XCTAssertTrue(allCount >= buttonCount, census)
+        XCTAssertTrue(buttonCount == 1, census)
+        let node = buttons.element(boundBy: 0)
+        XCTAssertEqual(node.label, expected, mark)
+        XCTAssertEqual(node.elementType, .button, mark)
+        phase = confirm ? .confirmBounds : .cancelBounds
+        let f = node.frame
+        XCTAssertTrue(f.origin.x.isFinite && f.origin.y.isFinite && f.width.isFinite && f.height.isFinite, mark)
+        XCTAssertTrue(!f.isEmpty && app.frame.contains(f), mark)
+        phase = confirm ? .confirmHit : .cancelHit
         XCTAssertTrue(node.isHittable, mark)
         node.tap()
     }

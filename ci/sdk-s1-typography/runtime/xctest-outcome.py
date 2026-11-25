@@ -4,10 +4,11 @@ from pathlib import Path
 import re
 import sys
 
-PHASES = ("title", "nav-initial", "nav-first-selector", "nav-first-bounds", "nav-first-hit", "nav-held", "nav-second-selector", "nav-second-bounds", "nav-second-hit", "nav-accepted", "progress", "modal", "background", "cancel", "confirm", "restored")
+PHASES = ("title", "nav-initial", "nav-first-selector", "nav-first-bounds", "nav-first-hit", "nav-held", "nav-second-selector", "nav-second-bounds", "nav-second-hit", "nav-accepted", "progress", "modal", "background", "cancel-selector", "cancel-bounds", "cancel-hit", "cancel-closed", "cancel-events", "cancel-running", "cancel-route", "cancel-progress", "confirm-open", "confirm-selector", "confirm-bounds", "confirm-hit", "confirm-closed", "confirm-events", "confirm-paused", "confirm-route", "confirm-progress", "restored")
 MARK = re.compile(r"MAD-XCT-ASSERT\[(" + "|".join(PHASES) + r")\]")
 BUCKET = r"(zero|one|multiple)"
 AX_MARK = re.compile(r"MAD-XCT-AX\[(first|second):" + BUCKET + ":" + BUCKET + r"\]")
+MODAL_MARK = re.compile(r"MAD-XCT-MODAL\[(cancel|confirm):" + BUCKET + ":" + BUCKET + r"\]")
 IDENTITY = "BookFilterUITests/testAlpha19AtlasTransfer"
 MAX_SUMMARY = 2_000_000
 
@@ -39,6 +40,7 @@ def sanitize(exit_code, summary_state, path):
         return dict(default, outcome="test-failed-no-detail")
     phases = set()
     ax_shapes = set()
+    modal_shapes = set()
     for f in failures:
         if not isinstance(f,dict) or f.get("testIdentifierString") not in {IDENTITY, IDENTITY+"()"}:
             continue
@@ -46,6 +48,14 @@ def sanitize(exit_code, summary_state, path):
         if isinstance(detail,str):
             phases.update(MARK.findall(detail))
             ax_shapes.update(AX_MARK.findall(detail))
+            modal_shapes.update(MODAL_MARK.findall(detail))
+    if len(modal_shapes)==1 and not phases and not ax_shapes and exit_code != 0:
+        action, descendants, buttons = next(iter(modal_shapes))
+        return dict(default, outcome="native-modal-button-selector-failed",
+                    assertionPhase=action+"-selector",
+                    modalExactLabelCensus={"action":action,"allDescendants":descendants,"buttons":buttons})
+    if modal_shapes:
+        return dict(default, outcome="test-failed-ambiguous-phase")
     if len(ax_shapes)==1 and not phases and exit_code != 0:
         shot, descendants, buttons = next(iter(ax_shapes))
         return dict(default, outcome="native-button-selector-failed",
