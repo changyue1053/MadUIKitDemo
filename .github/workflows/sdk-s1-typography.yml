@@ -1,17 +1,17 @@
-name: Synthetic alpha12 iOS form without binary export
+name: Synthetic alpha16 iOS Atlas directory without binary export
 on:
   push:
-    branches: [ci/sdk-alpha12-ios-boot-frame]
+    branches: [ci/sdk-alpha16-ios-atlas]
     paths:
       - '.github/workflows/sdk-s1-typography.yml'
       - 'ci/sdk-s1-typography/**'
 permissions: {contents: read}
 concurrency:
-  group: sdk-alpha12-ios-boot-frame
+  group: sdk-alpha16-ios-atlas
   cancel-in-progress: false
 jobs:
   build-and-run-without-export:
-    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-alpha12-ios-boot-frame'
+    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-alpha16-ios-atlas'
     runs-on: macos-26
     timeout-minutes: 65
     steps:
@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: changyue1053/MadUIKit
-          ref: dee2ece216db4b36fa28400dcc767a241fc4f367
+          ref: f891df864e0a3557f77e46eebff075ff2cb1efdb
           path: ci-input/sdk
           persist-credentials: false
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
@@ -67,8 +67,7 @@ jobs:
             ${{ runner.temp }}/mad-s1-runtime-receipt/guest-selected.json
             ${{ runner.temp }}/mad-s1-runtime-receipt/guest-booted.json
             ${{ runner.temp }}/mad-s1-runtime-receipt/runtime.json
-            ${{ runner.temp }}/mad-s1-runtime-receipt/S2-alpha12-form-invalid.png
-            ${{ runner.temp }}/mad-s1-runtime-receipt/S2-alpha12-form-editing.png
-            ${{ runner.temp }}/mad-s1-runtime-receipt/S2-alpha12-form-saved.png
+            ${{ runner.temp }}/mad-s1-runtime-receipt/S2-alpha16-atlas-results.png
+            ${{ runner.temp }}/mad-s1-runtime-receipt/S2-alpha16-atlas-empty.png
           if-no-files-found: warn
           retention-days: 7

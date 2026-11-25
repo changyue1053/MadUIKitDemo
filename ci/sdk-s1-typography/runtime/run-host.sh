@@ -10,7 +10,7 @@ work="$(cd "$work" && pwd -P)"
 gate=stock-arm-host
 trap 'rc=$?; printf "gate=%s\nexit=%s\nscope=synthetic iosSimulatorArm64 only\n" "$gate" "$rc" > "$out/result.txt"; exit "$rc"' EXIT
 runlog(){ gate="$1"; local t="$2"; shift 2; python3 "$ci/bounded.py" "$t" "$work/$gate.log" "$@"; }
-test "${GITHUB_REF:?}" = refs/heads/ci/sdk-alpha12-ios-boot-frame
+test "${GITHUB_REF:?}" = refs/heads/ci/sdk-alpha16-ios-atlas
 test "$(git rev-parse HEAD)" = "${GITHUB_SHA:?}"
 test "$(uname -s)-$(uname -m)-${ImageOS:?}" = Darwin-arm64-macos26
 image="${ImageVersion:?}"
@@ -37,7 +37,7 @@ cp -R "$local_framework" "$framework"
 python3 "$ci/runtime/same-job-framework.py" verify "$framework" "$proof"
 printf '%s  %s\n' \
   "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["callerSha256"])' "$proof")" \
-  "$ci/ui-adopter/composeApp/src/commonMain/kotlin/TrialForm.kt" | shasum -a 256 -c
+  "$ci/ui-adopter/composeApp/src/commonMain/kotlin/AtlasDirectory.kt" | shasum -a 256 -c
 binary="$framework/MadUIKitS1Adopter"
 xcrun lipo -archs "$binary" | grep -Fx arm64
 xcrun otool -l "$binary" | awk '/cmd LC_BUILD_VERSION/ { active=1; next } active && $1=="platform" {print $2; active=0}' | sort -u > "$out/framework-platform.txt"
@@ -90,14 +90,14 @@ cmp "$out/guest-booted.json" "$work/guest-before-test.json"
 xc="$work/ui.xcresult"
 runlog test 360 xcodebuild -xctestrun "$test_run" -destination "platform=iOS Simulator,id=$sim" \
  -parallel-testing-enabled NO -resultBundlePath "$xc" \
- -only-testing:MadUIKitDemoUITests/BookFilterUITests/testAlpha12TrialForm test-without-building
+ -only-testing:MadUIKitDemoUITests/BookFilterUITests/testAlpha16AtlasDirectory test-without-building
 gate=proven-original-attachments
 xcrun xcresulttool get test-results summary --path "$xc" > "$work/summary.json"
 mkdir "$work/attachments" "$work/verified"
 xcrun xcresulttool export attachments --path "$xc" --output-path "$work/attachments"
 python3 "$ci/runtime/runtime-proof.py" "$work/summary.json" "$work/attachments" "$work/verified" "$proof"
-for name in S2-alpha12-form-invalid S2-alpha12-form-editing S2-alpha12-form-saved; do
+for name in S2-alpha16-atlas-results S2-alpha16-atlas-empty; do
   runlog "imageio-$name" 45 "$validator" "$work/verified/$name.png" books
 done
-cp "$work/verified/"{S2-alpha12-form-invalid.png,S2-alpha12-form-editing.png,S2-alpha12-form-saved.png,runtime.json} "$out/"
-gate=verified-synthetic-alpha12-ios-form-entry
+cp "$work/verified/"{S2-alpha16-atlas-results.png,S2-alpha16-atlas-empty.png,runtime.json} "$out/"
+gate=verified-synthetic-alpha16-ios-atlas
