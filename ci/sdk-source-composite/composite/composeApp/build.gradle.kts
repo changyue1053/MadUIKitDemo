@@ -9,7 +9,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose") version "2.2.21"
     id("com.android.library") version "8.11.1"
 }
-val exactVersion = "0.1.0-alpha16-sdk-preview01"
+val exactVersion = "0.1.0-alpha19-sdk-preview01"
 val sdkGroup = "com.mad.maduikit"
 kotlin {
     androidTarget { compilerOptions { jvmTarget.set(JvmTarget.JVM_17) } }
@@ -41,7 +41,7 @@ tasks.register("verifySourceComposite") {
         val selectedComponents = directMatches.map { it.selected.id }.toSet()
         check(selectedComponents.size == 1)
         val component = selectedComponents.single() as? ProjectComponentIdentifier
-        check(component?.projectPath == ":maduikit-components" && component.build.buildPath == ":madUIKitExactAlpha16")
+        check(component?.projectPath == ":maduikit-components" && component.build.buildPath == ":madUIKitExactAlpha19")
         val theme = graph.allDependencies.filterIsInstance<ResolvedDependencyResult>().any {
             val selected = it.selected.id as? ProjectComponentIdentifier
             it.from.id == component && selected?.projectPath == ":maduikit-theme" && selected.build == requireNotNull(component).build
