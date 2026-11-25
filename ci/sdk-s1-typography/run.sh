@@ -21,8 +21,8 @@ runlog(){
   printf '%s\t%s\t%s\n' "$gate" "$rc" "$detail" >> "$out/checkpoints.tsv"
   return "$rc"
 }
-base=1a814b05d5d1262e5023779cc137d1e2aee3d391
-branch=refs/heads/ci/sdk-alpha12-ios-form
+base=52a260d8505e3fb9fa4b9453a65d9222de4d1a30
+branch=refs/heads/ci/sdk-alpha12-ios-boot-frame
 test "${GITHUB_REF:?}" = "$branch"
 pin=dee2ece216db4b36fa28400dcc767a241fc4f367
 test "$(git rev-parse HEAD)" = "${GITHUB_SHA:?}"
@@ -31,14 +31,8 @@ changed="$(git diff --name-only "$base" HEAD | LC_ALL=C sort)"
 expected="$(cat <<'FILES'
 .github/workflows/sdk-s1-typography.yml
 ci/sdk-s1-typography/run.sh
-ci/sdk-s1-typography/runtime/iosApp/BookFilterUITests.swift
+ci/sdk-s1-typography/runtime/boot-frame-gate.py
 ci/sdk-s1-typography/runtime/run-host.sh
-ci/sdk-s1-typography/runtime/runtime-proof.py
-ci/sdk-s1-typography/runtime/same-job-framework.py
-ci/sdk-s1-typography/ui-adopter/composeApp/build.gradle.kts
-ci/sdk-s1-typography/ui-adopter/composeApp/src/commonMain/kotlin/TrialForm.kt
-ci/sdk-s1-typography/ui-adopter/composeApp/src/iosMain/kotlin/FixtureViewController.kt
-ci/sdk-s1-typography/verify-stage.py
 FILES
 )"
 test "$changed" = "$expected"

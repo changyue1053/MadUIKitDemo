@@ -1,17 +1,17 @@
 name: Synthetic alpha12 iOS form without binary export
 on:
   push:
-    branches: [ci/sdk-alpha12-ios-form]
+    branches: [ci/sdk-alpha12-ios-boot-frame]
     paths:
       - '.github/workflows/sdk-s1-typography.yml'
       - 'ci/sdk-s1-typography/**'
 permissions: {contents: read}
 concurrency:
-  group: sdk-alpha12-ios-form
+  group: sdk-alpha12-ios-boot-frame
   cancel-in-progress: false
 jobs:
   build-and-run-without-export:
-    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-alpha12-ios-form'
+    if: github.repository == 'changyue1053/MadUIKitDemo' && github.ref == 'refs/heads/ci/sdk-alpha12-ios-boot-frame'
     runs-on: macos-26
     timeout-minutes: 65
     steps:
@@ -63,6 +63,7 @@ jobs:
             ${{ runner.temp }}/mad-s1-runtime-receipt/local-framework-disk.json
             ${{ runner.temp }}/mad-s1-runtime-receipt/framework-platform.txt
             ${{ runner.temp }}/mad-s1-runtime-receipt/frame-validator.json
+            ${{ runner.temp }}/mad-s1-runtime-receipt/boot-frame.json
             ${{ runner.temp }}/mad-s1-runtime-receipt/guest-selected.json
             ${{ runner.temp }}/mad-s1-runtime-receipt/guest-booted.json
             ${{ runner.temp }}/mad-s1-runtime-receipt/runtime.json
