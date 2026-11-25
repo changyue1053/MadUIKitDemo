@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd -P)"
-parent=25608df4d1f2e783645c1429e735a90fd8df86c0
-sdk_pin=532903a137952b81fa6ee773eff87c6cb39f5b86
-version=0.1.0-alpha10-sdk-preview01
-test "${GITHUB_REF:-}" = refs/heads/ci/sdk-alpha10-source-composite
+parent=efb3af5e79d12c00888a77664ab8c6d969fb6869
+sdk_pin=dee2ece216db4b36fa28400dcc767a241fc4f367
+version=0.1.0-alpha12-sdk-preview01
+test "${GITHUB_REF:-}" = refs/heads/ci/sdk-alpha12-source-composite
 [[ "${GITHUB_SHA:-}" =~ ^[0-9a-f]{40}$ && "${GITHUB_RUN_ID:-}" =~ ^[0-9]{1,20}$ && "${GITHUB_RUN_ATTEMPT:-}" =~ ^[0-9]{1,20}$ ]]
 tmp="$(cd "${RUNNER_TEMP:?}" && pwd -P)"
 out="$tmp/mad-source-composite-receipt"
@@ -44,10 +44,12 @@ r=dict(run=os.environ["GITHUB_RUN_ID"],attempt=os.environ["GITHUB_RUN_ATTEMPT"],
  stockStatus=category("stock-status.txt",None,known_stock),
  gradleFailureCategory=category("gradle-category.json","publisherCategory",known_cause),
  selectedSourceRoots=["maduikit-components","maduikit-theme"] if root=="yes" else [],
- probeClassCompiled=compiled=="yes",
- verifiedCalls=["MadSwitch","MadIcon","MadIconButton","MadCheckbox","MadRadio","MadDivider","MadActionButton"] if compiled=="yes" else [],
+ probeClassCompiled=compiled=="yes", formClassCompiled=compiled=="yes",
+ verifiedCalls=["MadSwitch","MadIcon","MadIconButton","MadCheckbox","MadRadio","MadDivider","MadActionButton","MadTextField","MadBadge"] if compiled=="yes" else [],
  verifiedButtonVariants=["Primary","Secondary","Text","Danger"] if compiled=="yes" else [],
  probeSourceSha256=fingerprint("source-sha"),probeClassSha256=fingerprint("class-sha"),
+ formSourceSha256=fingerprint("form-source-sha"),formClassSha256=fingerprint("form-class-sha"),
+ verifiedFormCalls={"MadTextField":4,"MadBadge":1} if compiled=="yes" else {},
  scope="synthetic Android source-composite compile only; no Maven publication, native link or execution")
 p.write_text(json.dumps(r,sort_keys=True,indent=2)+"\n")
 PY
@@ -70,10 +72,10 @@ test "$(git rev-parse HEAD^)" = "$parent"
 test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
 changed="$(git diff --name-only "$parent" HEAD | LC_ALL=C sort)"
 expected="$(cat <<'FILES'
-.github/workflows/sdk-alpha10-source-composite.yml
-ci/sdk-source-composite/check-calls.sh
+.github/workflows/sdk-alpha12-source-composite.yml
+ci/sdk-source-composite/check-form-calls.sh
 ci/sdk-source-composite/composite/composeApp/build.gradle.kts
-ci/sdk-source-composite/composite/composeApp/src/commonMain/kotlin/ControlsProbe.kt
+ci/sdk-source-composite/composite/composeApp/src/commonMain/kotlin/TrialForm.kt
 ci/sdk-source-composite/composite/settings.gradle.kts
 ci/sdk-source-composite/run.sh
 FILES
@@ -93,8 +95,15 @@ grep -Fx 'distributionSha256Sum=20f1b1176237254a6fc204d8434196fa11a4cfb387567519
 cp -R "$here/composite" "$w/app"
 cp "$w/sdk/gradlew" "$w/app/"
 cp -R "$w/sdk/gradle" "$w/app/"
-gate=resolve-and-compile-android
+gate=pin-shared-form
 cd "$w/app"
+controls_sha=205cfb76b429056d543f2c3154a923ecb3dfc91310a91fb7f61ba0a1a93eb0b1
+printf '%s  %s\n' "$controls_sha" composeApp/src/commonMain/kotlin/ControlsProbe.kt | shasum -a 256 -c
+trial_sha=3613c4105416edbc7e2ddff6dc9713f1fb3ed077471f1cd030b297ff1c70ad4f
+trial_src=composeApp/src/commonMain/kotlin/TrialForm.kt
+printf '%s  %s\n' "$trial_sha" "$trial_src" | shasum -a 256 -c
+printf '%s\n' "$trial_sha" > "$w/form-source-sha"
+gate=resolve-and-compile-android
 export GRADLE_USER_HOME="$w/gradle"
 set +e
 python3 "$here/bounded.py" 480 "$w/gradle.log" bash gradlew --no-daemon --console=plain --no-build-cache --max-workers=1 \
@@ -117,5 +126,11 @@ test -n "$class" && test -s "$class"
 bash "$here/check-calls.sh" "$w/probe.javap"
 shasum -a 256 "$class" | awk '{print $1}' > "$w/class-sha"
 shasum -a 256 composeApp/src/commonMain/kotlin/ControlsProbe.kt | awk '{print $1}' > "$w/source-sha"
+gate=check-actual-form-compile-output
+class="$(find "$w/app/composeApp/build" -type f -path '*/dev/mad/synthetic/typography/TrialFormKt.class' -print)"
+test -n "$class" && test -s "$class"
+"$JAVA_HOME/bin/javap" -c -p "$class" > "$w/form.javap"
+bash "$here/check-form-calls.sh" "$w/form.javap"
+shasum -a 256 "$class" | awk '{print $1}' > "$w/form-class-sha"
 compiled=yes
 gate=android-source-composite-compile-passed
