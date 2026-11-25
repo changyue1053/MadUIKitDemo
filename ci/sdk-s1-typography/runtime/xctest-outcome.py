@@ -6,6 +6,8 @@ import sys
 
 PHASES = ("title", "nav-initial", "nav-first-selector", "nav-first-bounds", "nav-first-hit", "nav-held", "nav-second-selector", "nav-second-bounds", "nav-second-hit", "nav-accepted", "progress", "modal", "background", "cancel", "confirm", "restored")
 MARK = re.compile(r"MAD-XCT-ASSERT\[(" + "|".join(PHASES) + r")\]")
+BUCKET = r"(zero|one|multiple)"
+AX_MARK = re.compile(r"MAD-XCT-AX\[(first|second):" + BUCKET + ":" + BUCKET + r"\]")
 IDENTITY = "BookFilterUITests/testAlpha19AtlasTransfer"
 MAX_SUMMARY = 2_000_000
 
@@ -36,12 +38,21 @@ def sanitize(exit_code, summary_state, path):
     if not isinstance(failures,list) or not failures:
         return dict(default, outcome="test-failed-no-detail")
     phases = set()
+    ax_shapes = set()
     for f in failures:
         if not isinstance(f,dict) or f.get("testIdentifierString") not in {IDENTITY, IDENTITY+"()"}:
             continue
         detail = f.get("failureText")
         if isinstance(detail,str):
             phases.update(MARK.findall(detail))
+            ax_shapes.update(AX_MARK.findall(detail))
+    if len(ax_shapes)==1 and not phases and exit_code != 0:
+        shot, descendants, buttons = next(iter(ax_shapes))
+        return dict(default, outcome="native-button-selector-failed",
+                    assertionPhase="nav-first-selector" if shot=="first" else "nav-second-selector",
+                    navExactLabelCensus={"attempt":shot,"allDescendants":descendants,"buttons":buttons})
+    if ax_shapes:
+        return dict(default, outcome="test-failed-ambiguous-phase")
     if len(phases)==1 and exit_code != 0:
         return dict(default, outcome="marked-assertion-failed", assertionPhase=next(iter(phases)))
     if len(phases)>1:

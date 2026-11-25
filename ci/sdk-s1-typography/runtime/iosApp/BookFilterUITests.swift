@@ -78,11 +78,22 @@ final class BookFilterUITests: XCTestCase {
 
     private func tapTransfers(_ app: XCUIApplication, second: Bool) {
         phase = second ? .navSecondSelector : .navFirstSelector
-        let transfers = labels(app, "Transfers")
-        XCTAssertTrue(transfers.firstMatch.waitForExistence(timeout: 25), mark)
-        XCTAssertEqual(transfers.count, 1, mark)
+        let fixedLabel = NSPredicate(format: "label == %@", "Transfers")
+        let buttons = app.buttons.matching(fixedLabel)
+        // CMP 1.9.3 maps OnClick to the iOS Button trait; it has no Role.Tab
+        // specialization. A static-text sibling must not satisfy this gate.
+        _ = buttons.firstMatch.waitForExistence(timeout: 25)
+        let allExact = app.descendants(matching: .any).matching(fixedLabel).count
+        let buttonExact = buttons.count
+        func bucket(_ count: Int) -> String { count == 0 ? "zero" : count == 1 ? "one" : "multiple" }
+        let shot = second ? "second" : "first"
+        let census = "MAD-XCT-AX[\(shot):\(bucket(allExact)):\(bucket(buttonExact))]"
+        XCTAssertTrue(allExact >= buttonExact, census)
+        XCTAssertTrue(buttonExact == 1, census)
+        let transfers = buttons
         let node = transfers.element(boundBy: 0)
         XCTAssertEqual(node.label, "Transfers", mark)
+        XCTAssertEqual(node.elementType, .button, mark)
         phase = second ? .navSecondBounds : .navFirstBounds
         let f = node.frame
         XCTAssertTrue(f.origin.x.isFinite && f.origin.y.isFinite && f.width.isFinite && f.height.isFinite, mark)
