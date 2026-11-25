@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd -P)"
-parent=efb3af5e79d12c00888a77664ab8c6d969fb6869
-sdk_pin=dee2ece216db4b36fa28400dcc767a241fc4f367
-version=0.1.0-alpha12-sdk-preview01
-test "${GITHUB_REF:-}" = refs/heads/ci/sdk-alpha12-source-composite
+parent=d5e08ff3d7797c127e38f1ab094b7172d9f4a37f
+sdk_pin=f891df864e0a3557f77e46eebff075ff2cb1efdb
+version=0.1.0-alpha16-sdk-preview01
+test "${GITHUB_REF:-}" = refs/heads/ci/sdk-alpha16-source-composite
 [[ "${GITHUB_SHA:-}" =~ ^[0-9a-f]{40}$ && "${GITHUB_RUN_ID:-}" =~ ^[0-9]{1,20}$ && "${GITHUB_RUN_ATTEMPT:-}" =~ ^[0-9]{1,20}$ ]]
 tmp="$(cd "${RUNNER_TEMP:?}" && pwd -P)"
 out="$tmp/mad-source-composite-receipt"
@@ -44,11 +44,13 @@ r=dict(run=os.environ["GITHUB_RUN_ID"],attempt=os.environ["GITHUB_RUN_ATTEMPT"],
  stockStatus=category("stock-status.txt",None,known_stock),
  gradleFailureCategory=category("gradle-category.json","publisherCategory",known_cause),
  selectedSourceRoots=["maduikit-components","maduikit-theme"] if root=="yes" else [],
- probeClassCompiled=compiled=="yes", formClassCompiled=compiled=="yes",
- verifiedCalls=["MadSwitch","MadIcon","MadIconButton","MadCheckbox","MadRadio","MadDivider","MadActionButton","MadTextField","MadBadge"] if compiled=="yes" else [],
+ probeClassCompiled=compiled=="yes", formClassCompiled=compiled=="yes", collectionClassCompiled=compiled=="yes",
+ verifiedCalls=["MadSwitch","MadIcon","MadIconButton","MadCheckbox","MadRadio","MadDivider","MadActionButton","MadTextField","MadBadge","MadSearchField","MadListItem","MadAvatar","MadCard"] if compiled=="yes" else [],
  verifiedButtonVariants=["Primary","Secondary","Text","Danger"] if compiled=="yes" else [],
  probeSourceSha256=fingerprint("source-sha"),probeClassSha256=fingerprint("class-sha"),
  formSourceSha256=fingerprint("form-source-sha"),formClassSha256=fingerprint("form-class-sha"),
+ collectionSourceSha256=fingerprint("collection-source-sha"),collectionClassSha256=fingerprint("collection-class-sha"),
+ verifiedCollectionCalls={"MadSearchField":1,"MadListItem":1,"MadAvatar":1,"MadCard":1} if compiled=="yes" else {},
  verifiedFormCalls={"MadTextField":4,"MadBadge":1} if compiled=="yes" else {},
  scope="synthetic Android source-composite compile only; no Maven publication, native link or execution")
 p.write_text(json.dumps(r,sort_keys=True,indent=2)+"\n")
@@ -72,10 +74,10 @@ test "$(git rev-parse HEAD^)" = "$parent"
 test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
 changed="$(git diff --name-only "$parent" HEAD | LC_ALL=C sort)"
 expected="$(cat <<'FILES'
-.github/workflows/sdk-alpha12-source-composite.yml
-ci/sdk-source-composite/check-form-calls.sh
+.github/workflows/sdk-alpha16-source-composite.yml
+ci/sdk-source-composite/check-collection-calls.sh
 ci/sdk-source-composite/composite/composeApp/build.gradle.kts
-ci/sdk-source-composite/composite/composeApp/src/commonMain/kotlin/TrialForm.kt
+ci/sdk-source-composite/composite/composeApp/src/commonMain/kotlin/CollectionProbe.kt
 ci/sdk-source-composite/composite/settings.gradle.kts
 ci/sdk-source-composite/run.sh
 FILES
@@ -103,6 +105,9 @@ trial_sha=3613c4105416edbc7e2ddff6dc9713f1fb3ed077471f1cd030b297ff1c70ad4f
 trial_src=composeApp/src/commonMain/kotlin/TrialForm.kt
 printf '%s  %s\n' "$trial_sha" "$trial_src" | shasum -a 256 -c
 printf '%s\n' "$trial_sha" > "$w/form-source-sha"
+collection_sha=253c43b47b2e91dc10bf0446f414d7efa29e63f8417813763e70f5ffdc484ca5
+printf '%s  %s\n' "$collection_sha" composeApp/src/commonMain/kotlin/CollectionProbe.kt | shasum -a 256 -c
+printf '%s\n' "$collection_sha" > "$w/collection-source-sha"
 gate=resolve-and-compile-android
 export GRADLE_USER_HOME="$w/gradle"
 set +e
@@ -132,5 +137,11 @@ test -n "$class" && test -s "$class"
 "$JAVA_HOME/bin/javap" -c -p "$class" > "$w/form.javap"
 bash "$here/check-form-calls.sh" "$w/form.javap"
 shasum -a 256 "$class" | awk '{print $1}' > "$w/form-class-sha"
+gate=check-actual-collection-compile-output
+class="$(find "$w/app/composeApp/build" -type f -path '*/dev/mad/synthetic/typography/CollectionProbeKt.class' -print)"
+test -n "$class" && test -s "$class"
+"$JAVA_HOME/bin/javap" -c -p "$class" > "$w/collection.javap"
+bash "$here/check-collection-calls.sh" "$w/collection.javap"
+shasum -a 256 "$class" | awk '{print $1}' > "$w/collection-class-sha"
 compiled=yes
 gate=android-source-composite-compile-passed
