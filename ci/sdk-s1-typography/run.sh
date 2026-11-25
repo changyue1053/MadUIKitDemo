@@ -21,8 +21,8 @@ runlog(){
   printf '%s\t%s\t%s\n' "$gate" "$rc" "$detail" >> "$out/checkpoints.tsv"
   return "$rc"
 }
-base=90a19c5f7ce451f505dd6f0b769d4014b86fc9a7
-branch=refs/heads/ci/sdk-alpha19-ios-transfer
+base=669ada1d650d645592c5642385a484ec3d8c855d
+branch=refs/heads/ci/sdk-alpha19-ios-transfer-diagnostic
 test "${GITHUB_REF:?}" = "$branch"
 pin=c84f26b1d3eccecfeed337ed66ef975c95b36fed
 test "$(git rev-parse HEAD)" = "${GITHUB_SHA:?}"
@@ -33,12 +33,7 @@ expected="$(cat <<'FILES'
 ci/sdk-s1-typography/run.sh
 ci/sdk-s1-typography/runtime/iosApp/BookFilterUITests.swift
 ci/sdk-s1-typography/runtime/run-host.sh
-ci/sdk-s1-typography/runtime/runtime-proof.py
-ci/sdk-s1-typography/runtime/same-job-framework.py
-ci/sdk-s1-typography/ui-adopter/composeApp/build.gradle.kts
-ci/sdk-s1-typography/ui-adopter/composeApp/src/commonMain/kotlin/AtlasTransfer.kt
-ci/sdk-s1-typography/ui-adopter/composeApp/src/iosMain/kotlin/FixtureViewController.kt
-ci/sdk-s1-typography/verify-stage.py
+ci/sdk-s1-typography/runtime/xctest-outcome.py
 FILES
 )"
 test "$changed" = "$expected"
